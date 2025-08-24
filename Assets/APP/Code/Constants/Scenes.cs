@@ -1,6 +1,6 @@
 ﻿namespace Constants
 {
-	public static class SceneNames
+	public static class Scenes
 	{
 		public const string INIT = "init";
 		public const string LOBBY = "lobby";

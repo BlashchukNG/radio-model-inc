@@ -1,19 +1,22 @@
 ﻿using System.Collections;
 using System.Threading.Tasks;
 using Constants;
+using Game.UI;
+using Lobby.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Infrastructure
 {
-	public sealed class Boot
+	public sealed class AppEntryPoint
 	{
-		private static Boot _instance;
-
+		private static AppEntryPoint _instance;
 
 		private CoroutineRunner _coroutiner;
-		private WaitForSeconds _delayBeforeLoadScene = new WaitForSeconds(0.5f);
-		private WaitForSeconds _delayBetweenScenes = new WaitForSeconds(2f);
+		private readonly WaitForSeconds _delayBeforeLoadScene = new(0.5f);
+		private readonly WaitForSeconds _delayBetweenScenes = new(2f);
+
+		private readonly UIRootView _uiRootView;
 
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -23,13 +26,14 @@ namespace Infrastructure
 			Application.targetFrameRate = 60;
 			Screen.sleepTimeout = SleepTimeout.NeverSleep;
 
-			_instance = new Boot();
+			_instance = new AppEntryPoint();
 			_instance.RunApp();
 		}
 
-		private Boot()
+		private AppEntryPoint()
 		{
 			InitServices();
+			_uiRootView = CreateUIRootView();
 		}
 
 		private async void RunApp()
@@ -41,36 +45,79 @@ namespace Infrastructure
 
 			switch (sceneName)
 			{
-				case SceneNames.LOBBY:
+				case Scenes.LOBBY:
 					_coroutiner.StartCoroutine(LoadLobby());
 					break;
-				// case SceneNames.GAMEPLAY:
-				// 	//_sceneLoaderService.LoadGameplay();
-				// 	break;
+				case Scenes.GAME:
+					//_sceneLoaderService.LoadGameplay();
+					break;
 			}
 
-			if (sceneName != SceneNames.INIT)
+			if (sceneName != Scenes.INIT)
 				return;
 		#endif
 
 			_coroutiner.StartCoroutine(LoadLobby());
 		}
 
+		public UIRootView CreateUIRootView()
+		{
+			var prefab = Resources.Load<UIRootView>(Prefabs.UI_ROOT);
+			var obj = Object.Instantiate(prefab);
+			Object.DontDestroyOnLoad(obj.gameObject);
+			return obj;
+		}
+
 		#region LOAD
+
+		public void ToLobby()
+		{
+			Debug.Log("LOBBY");
+			_coroutiner.StartCoroutine(LoadLobby());
+		}
+
+		public void ToGame()
+		{
+			Debug.Log("Game");
+			_coroutiner.StartCoroutine(LoadGame());
+		}
 
 		private IEnumerator LoadLobby()
 		{
+			_uiRootView.ShowLoadingScreen();
+
 			yield return _delayBeforeLoadScene;
-			yield return LoadScene(SceneNames.INIT);
-			yield return LoadScene(SceneNames.LOBBY);
+			yield return LoadScene(Scenes.INIT);
+			yield return LoadScene(Scenes.LOBBY);
 			yield return _delayBetweenScenes;
 			yield return LoadGameState();
 
-			//TODO: init lobby
+			var ui = Object.Instantiate(Resources.Load<LobbyUI>(Prefabs.UI_LOBBY));
+			ui.Init(this);
+			_uiRootView.AttachSceneUI(ui.gameObject);
 
 			yield return _delayBeforeLoadScene;
 
-			//_uiRootView.HideLoadingScreen();
+			_uiRootView.HideLoadingScreen();
+		}
+
+		private IEnumerator LoadGame()
+		{
+			_uiRootView.ShowLoadingScreen();
+
+			yield return _delayBeforeLoadScene;
+			yield return LoadScene(Scenes.INIT);
+			yield return LoadScene(Scenes.GAME);
+			yield return _delayBetweenScenes;
+			yield return LoadGameState();
+
+			var ui = Object.Instantiate(Resources.Load<GameUI>(Prefabs.UI_GAME));
+			ui.Init(this);
+			_uiRootView.AttachSceneUI(ui.gameObject);
+
+			yield return _delayBeforeLoadScene;
+
+			_uiRootView.HideLoadingScreen();
 		}
 
 		private IEnumerator LoadGameState()
@@ -100,8 +147,6 @@ namespace Infrastructure
 			_coroutiner = new GameObject("COROUTINER")
 				.AddComponent<CoroutineRunner>();
 			Object.DontDestroyOnLoad(_coroutiner);
-			
-			
 		}
 	}
 }
