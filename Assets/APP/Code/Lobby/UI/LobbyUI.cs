@@ -1,5 +1,4 @@
-﻿using System;
-using Infrastructure;
+﻿using Infrastructure;
 using UnityEngine;
 using UnityEngine.UI;
 
