@@ -2,8 +2,12 @@
 
 namespace Game.Logic.ControlPanels
 {
-	public sealed class BaseControl : MonoBehaviour
+	public abstract class BaseControl : MonoBehaviour
 	{
-		
+		public ControlType type;
+
+		public abstract void SetEnterParams(Vector3 position);
+
+		public abstract float GetValue();
 	}
 }
