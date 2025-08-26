@@ -6,8 +6,12 @@ namespace Game.Logic.ControlPanels
 	{
 		public ControlType type;
 
-		public abstract void SetEnterParams(Vector3 position);
+		[SerializeField] protected Transform _model;
+		[SerializeField] protected float _sensetivity;
+		[SerializeField] protected float _value;
 
-		public abstract float GetValue();
+		public abstract void SetEnterParams(Vector3 position);
+		public float GetValue() => _value * _sensetivity;
+		public abstract void Release();
 	}
 }

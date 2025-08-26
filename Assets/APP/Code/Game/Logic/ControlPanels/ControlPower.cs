@@ -2,9 +2,9 @@
 
 namespace Game.Logic.ControlPanels
 {
-	public sealed class ControlGear : BaseControl
+	public sealed class ControlPower : BaseControl
 	{
-		[SerializeField] private float _min, _max;
+		[SerializeField] private Transform _min, _max;
 		
 		private Vector3 _newPosition;
 
@@ -25,12 +25,10 @@ namespace Game.Logic.ControlPanels
 			if (_model.position != _newPosition)
 			{
 				var newPos = Vector3.Lerp(_model.localPosition, _newPosition, Time.deltaTime * 50f);
-				newPos.x = Mathf.Clamp(newPos.x, _min, _max);
+				newPos.x = Mathf.Clamp(newPos.x, _min.localPosition.x, _max.localPosition.x);
 				_model.localPosition = newPos;
-
-				if (_model.localPosition.x < -0.25f) _value = -1;
-				else if (_model.localPosition.x > 0.25f) _value = 1;
-				else _value = 0;
+				
+				_value = Vector3.Distance(new Vector3(_model.localPosition.x,0,0), _min.localPosition) / 4f;
 			}
 		}
 	}
