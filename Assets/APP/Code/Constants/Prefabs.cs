@@ -1,4 +1,4 @@
-﻿namespace Constants
+﻿namespace constants
 {
 	public static class Prefabs
 	{

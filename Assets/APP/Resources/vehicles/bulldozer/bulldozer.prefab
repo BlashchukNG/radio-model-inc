@@ -108,6 +108,84 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1001 &565047872441197732
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 3845238121765886315}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.14
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.14
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.14
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+      propertyPath: m_Name
+      value: Bulldozer_01 (2)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+--- !u!4 &26403082398057295 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 191489fcd04fc0e4e88d402c99886af9, type: 3}
+  m_PrefabInstance: {fileID: 565047872441197732}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &5465394866004863780
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -156,6 +234,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4159434574451358523, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5581378226724886153, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
       propertyPath: m_Name
       value: bulldozer
@@ -163,6 +245,9 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 9116970229108568655, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
+      insertIndex: 0
+      addedObject: {fileID: 26403082398057295}
     - targetCorrespondingSourceObject: {fileID: 7283117459506267098, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1339576857751728334}
@@ -173,6 +258,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5581378226724886153, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
       insertIndex: -1
       addedObject: {fileID: 662616372640159396}
+    - targetCorrespondingSourceObject: {fileID: 5581378226724886153, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2015286009353420221}
   m_SourcePrefab: {fileID: 100100000, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
 --- !u!1 &481307098206961069 stripped
 GameObject:
@@ -194,6 +282,8 @@ MonoBehaviour:
   _rb: {fileID: 662616372640159396}
   _velocity: 3000
   _maxVelocity: 0
+  _turnSpeed: 0
+  _maxTurnSpeed: 0
 --- !u!54 &662616372640159396
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -221,8 +311,34 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!65 &2015286009353420221
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 481307098206961069}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0.5, z: 0}
 --- !u!4 &3371559023754586366 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7283117459506267098, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
+  m_PrefabInstance: {fileID: 5465394866004863780}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &3845238121765886315 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9116970229108568655, guid: f001bb516f74b8b41b8c11fb4f423ca8, type: 3}
   m_PrefabInstance: {fileID: 5465394866004863780}
   m_PrefabAsset: {fileID: 0}

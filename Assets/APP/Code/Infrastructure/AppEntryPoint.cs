@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using System.Threading.Tasks;
-using Constants;
+using constants;
 using Game.UI;
 using Lobby.UI;
 using UnityEngine;
