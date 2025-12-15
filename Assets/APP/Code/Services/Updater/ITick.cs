@@ -1,4 +1,4 @@
-﻿namespace Services.Updater
+﻿namespace services.updater
 {
 	public interface ITick : IUpdatable
 	{

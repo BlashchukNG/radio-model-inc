@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Localization.Settings;
 
-namespace Extensions
+namespace extensions
 {
 	public static partial class Extensions
 	{

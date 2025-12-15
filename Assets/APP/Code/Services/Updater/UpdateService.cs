@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Services.Updater
+namespace services.updater
 {
 	public sealed class UpdateService : MonoBehaviour, IUpdateService
 	{

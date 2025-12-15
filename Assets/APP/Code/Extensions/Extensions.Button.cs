@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine.UI;
 
-namespace Extensions
+namespace extensions
 {
 	public static partial class Extensions
 	{

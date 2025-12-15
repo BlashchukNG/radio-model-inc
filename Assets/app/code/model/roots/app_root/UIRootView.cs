@@ -1,22 +1,21 @@
-﻿//using Infrastructure.Coroutiner;
-using UnityEngine;
+﻿using UnityEngine;
+using utils;
 
-namespace Infrastructure.Roots.AppRoot
+namespace model.roots.app_root
 {
 	public sealed class UIRootView : MonoBehaviour
 	{
-		//[SerializeField] private CanvasShowHideController _loadingScreen;
+		[SerializeField] private CanvasShowHideController _loadingScreen;
 		[SerializeField] private Transform _uiSceneContainer;
 
-		//private void Awake() => HideLoadingScreen();
+		private void Awake() => HideLoadingScreen();
 
 		public void ShowLoadingScreen()
 		{
-			// print(1);
-			// _loadingScreen.Show();
+			_loadingScreen.Show();
 		}
 
-		//public void HideLoadingScreen() => _loadingScreen.Hide();
+		public void HideLoadingScreen() => _loadingScreen.Hide();
 
 		public void AttachSceneUI(GameObject sceneUI)
 		{
