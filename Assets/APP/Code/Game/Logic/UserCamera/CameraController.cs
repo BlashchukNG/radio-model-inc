@@ -10,9 +10,11 @@ namespace Game.Logic.UserCamera
 		[SerializeField] private Transform _controlSpawnPoint;
 
 		[SerializeField] private Vector3 _offset;
+		[SerializeField] private float _smoothTime = 0.3f;
 
 		private Transform _target;
 		private BaseControlPanel _controlPanel;
+		private Vector3 _velocity;
 		private bool _inGame;
 
 		public BaseControlPanel ControlPanel => _controlPanel;
@@ -49,7 +51,11 @@ namespace Game.Logic.UserCamera
 		{
 			if (!_inGame) return;
 
-			transform.position = Vector3.Lerp(transform.position, _target.position + _offset, Time.deltaTime * 20);
+			var desiredPosition = _target.position + _offset;
+			var smoothedPosition = Vector3.SmoothDamp(transform.position, desiredPosition, ref _velocity, _smoothTime);
+			transform.position = smoothedPosition;
+			
+			//transform.position = Vector3.Lerp(transform.position, _target.position + _offset, Time.deltaTime * 20);
 		}
 	}
 }

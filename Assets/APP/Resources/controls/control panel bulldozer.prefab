@@ -1429,7 +1429,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   type: 4
   _model: {fileID: 1030949994170209252}
-  _sensetivity: 0.35
+  _sensetivity: 0.01
   _value: 0
   _min: -30
   _max: 30

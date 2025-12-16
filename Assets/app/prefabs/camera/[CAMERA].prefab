@@ -48,11 +48,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _controlCamera: {fileID: 7852688628909434820}
-  _controlMask:
-    serializedVersion: 2
-    m_Bits: 64
   _controlSpawnPoint: {fileID: 8865239698689633130}
   _offset: {x: 0, y: 60, z: -35}
+  _smoothTime: 0.001
 --- !u!1 &3607816438405984842
 GameObject:
   m_ObjectHideFlags: 0

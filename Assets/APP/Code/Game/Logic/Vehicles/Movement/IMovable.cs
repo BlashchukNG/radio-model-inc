@@ -3,6 +3,6 @@
 	public interface IMovable
 	{
 		void Move(float power, float gear);
-		void Rotate(float angle);
+		void Rotate(float power, float angle);
 	}
 }
