@@ -22,13 +22,10 @@ namespace SingularityGroup.HotReload.Editor {
         public static void HandleEditorStart(string updatedFromVersion) {
             var showOnStartup = HotReloadPrefs.ShowOnStartup;
             if (showOnStartup == ShowOnStartupEnum.Always || (showOnStartup == ShowOnStartupEnum.OnNewVersion && !String.IsNullOrEmpty(updatedFromVersion))) {
-                // Don't open Hot Reload window inside Virtual Player folder
-                // This is a heuristic since user might have the main player inside VP user-created folder, but that will be rare
-                if (new DirectoryInfo(Path.GetFullPath("..")).Name != "VP" && !HotReloadPrefs.DeactivateHotReload) {
-                    HotReloadWindow.Open();
-                }
+                HotReloadWindow.Open();
             }
-            if (HotReloadPrefs.LaunchOnEditorStart && !HotReloadPrefs.DeactivateHotReload) {
+            if (HotReloadPrefs.LaunchOnEditorStart) {
+                HotReloadWindow.Open();
                 EditorCodePatcher.DownloadAndRun().Forget();
             }
             
@@ -49,15 +46,10 @@ namespace SingularityGroup.HotReload.Editor {
             if (EditorCodePatcher.licenseType == UnityLicenseType.UnityPro) {
                 RedeemLicenseHelper.I.StartRegistration();
             }
-            // Don't open Hot Reload window inside Virtual Player folder
-            // This is a heuristic since user might have the main player inside VP user-created folder, but that will be rare
-            if (new DirectoryInfo(Path.GetFullPath("..")).Name != "VP") {
-                HotReloadWindow.Open();
-            }
+            HotReloadWindow.Open();
             HotReloadPrefs.AllowDisableUnityAutoRefresh = true;
             HotReloadPrefs.AllAssetChanges = true;
             HotReloadPrefs.AutoRecompileUnsupportedChanges = true;
-            HotReloadPrefs.AutoRecompileUnsupportedChangesOnExitPlayMode = true;
             if (HotReloadCli.CanOpenInBackground) {
                 HotReloadPrefs.DisableConsoleWindow = true;
             }

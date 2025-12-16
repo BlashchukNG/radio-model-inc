@@ -5,7 +5,6 @@ using System.IO;
 using UnityEditor;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using SingularityGroup.HotReload.Editor.Localization;
 using SingularityGroup.HotReload.Newtonsoft.Json;
 using UnityEditor.Compilation;
 
@@ -15,12 +14,12 @@ namespace SingularityGroup.HotReload.Editor {
     internal static class AssemblyOmission {
         // [MenuItem("Window/Hot Reload Dev/List omitted projects")]
         private static void Check() {
-            Log.Info(Translations.Errors.InfoOmitProjectsForPlayerBuild);
+            Log.Info("To compile C# files same as a Player build, we must omit projects which aren't part of the selected Player build.");
             var omitted = GetOmittedProjects(EditorUserBuildSettings.activeScriptCompilationDefines);
-            Log.Info(Translations.Errors.InfoSeparator);
+            Log.Info("---------");
 
             foreach (var name in omitted) {
-                Log.Info(Translations.Errors.InfoOmittedEditorProject, name);
+                Log.Info("omitted editor/other project named: {0}", name);
             }
         }
         
@@ -70,10 +69,10 @@ namespace SingularityGroup.HotReload.Editor {
 
             if (verboseLogs) {
                 foreach (var name in editorAssemblies) {
-                    Log.Info(Translations.Errors.InfoFoundProjectNamed, name);
+                    Log.Info("found project named {0}", name);
                 }
                 foreach (var playerAssemblyName in playerAssemblies) {
-                    Log.Debug(string.Format(Translations.Utility.PlayerAssemblyDebug, playerAssemblyName));
+                    Log.Debug("player assembly named {0}", playerAssemblyName);
                 }
             }
             // leaves the editor assemblies that are not built into player assemblies (e.g. editor and test assemblies)
@@ -144,14 +143,6 @@ namespace SingularityGroup.HotReload.Editor {
                     return null;
                 }
             }
-
-            // Unity Define Constraints syntax is described in the docs https://docs.unity3d.com/Manual/class-AssemblyDefinitionImporter.html
-            static readonly Dictionary<string, string> syntaxMap = new Dictionary<string, string> {
-                    { "OR", "||" },
-                    { "AND", "&&" },
-                    { "NOT", "!" }
-                };
-            
             
             /// <summary>
             /// Evaluate a define constraint like 'UNITY_ANDROID || UNITY_IOS'
@@ -160,24 +151,33 @@ namespace SingularityGroup.HotReload.Editor {
             /// <param name="defineSymbols"></param>
             /// <returns></returns>
             public static bool EvaluateDefineConstraint(string input, string[] defineSymbols) {
+                foreach (var defineSymbol in defineSymbols) {
+                    input = input.Replace(defineSymbol, "true");
+                }
+
+                // Unity Define Constraints syntax is described in the docs https://docs.unity3d.com/Manual/class-AssemblyDefinitionImporter.html
+                var syntaxMap = new Dictionary<string, string> {
+                    { "||", "OR" },
+                    { "&&", "AND" },
+                    { "!", "NOT" }
+                };
                 // map Unity defineConstraints syntax to DataTable syntax (unity supports both)
                 foreach (var item in syntaxMap) {
                     // surround with space because || may not have spaces around it
-                    input = input.Replace(item.Value, $" {item.Key} ");
+                    input = input.Replace(item.Key, $" {item.Value} ");
                 }
 
                 // remove any extra spaces we just created
                 input = input.Replace("  ", " ");
 
-                var tokens = input.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var allPossibleSyntax = syntaxMap.Values.Concat(new[] { "true", "false" });
 
-                foreach (var token in tokens) {
-                    if (!syntaxMap.ContainsKey(token) && token != "false" && token != "true") {
-                        var index = input.IndexOf(token, StringComparison.Ordinal);
-                        
-                        // replace symbols with true or false depending if they are in the array or not.
-                        input = input.Substring(0, index) + defineSymbols.Contains(token) + input.Substring(index + token.Length);
-                    }
+                var tokens = input.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                // known define symbols already replaced, so any unknown syntax is a missing define symbol
+                var notFoundDefineSymbols =
+                    tokens.Where(token => !allPossibleSyntax.Contains(token));
+                foreach (var defineSymbol in notFoundDefineSymbols) {
+                    input = input.Replace(defineSymbol, "false");
                 }
 
                 var dt = new DataTable();

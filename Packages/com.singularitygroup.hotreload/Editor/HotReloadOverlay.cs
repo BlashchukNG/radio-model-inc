@@ -1,7 +1,5 @@
 #if UNITY_2021_2_OR_NEWER
-using System;
 using System.Collections.Generic;
-using SingularityGroup.HotReload.Editor.Localization;
 using UnityEditor.Overlays;
 using UnityEngine.UIElements;
 using UnityEditor;
@@ -9,23 +7,17 @@ using UnityEngine;
 using UnityEditor.Toolbars;
 
 namespace SingularityGroup.HotReload.Editor {
-    [Overlay(typeof(SceneView), Translations.MenuItems.OverlayDescription, true)]
+    [Overlay(typeof(SceneView), "Hot Reload", true)]
     [Icon("Assets/HotReload/Editor/Resources/Icon_DarkMode.png")]
     internal class HotReloadOverlay : ToolbarOverlay {
-        HotReloadOverlay() : base(HotReloadToolbarIndicationButton.id, HotReloadToolbarEventsButton.id, HotReloadToolbarRecompileButton.id) {
-            EditorApplication.update += Update;
-        }
-        
-        EditorIndicationState.IndicationStatus lastIndicationStatus;
+        HotReloadOverlay() : base(HotReloadToolbarButton.id) {}
         
         [EditorToolbarElement(id, typeof(SceneView))]
-        class HotReloadToolbarIndicationButton : EditorToolbarButton, IAccessContainerWindow {
+        class HotReloadToolbarButton : EditorToolbarButton, IAccessContainerWindow {
             internal const string id = "HotReloadOverlay/LogoButton";
             public EditorWindow containerWindow { get; set; }
-
-            EditorIndicationState.IndicationStatus lastIndicationStatus;
             
-            internal HotReloadToolbarIndicationButton() {
+            internal HotReloadToolbarButton() {
                 icon = GetIndicationIcon();
                 tooltip = EditorIndicationState.IndicationStatusText;
                 clicked += OnClick;
@@ -38,62 +30,9 @@ namespace SingularityGroup.HotReload.Editor {
             }
        
             void Update() {
-                if (lastIndicationStatus != EditorIndicationState.CurrentIndicationStatus) {
-                    icon = GetIndicationIcon();
-                    tooltip = EditorIndicationState.IndicationStatusText;
-                    lastIndicationStatus = EditorIndicationState.CurrentIndicationStatus;
-                }
-            }
-
-            ~HotReloadToolbarIndicationButton() {
-                clicked -= OnClick;
-                EditorApplication.update -= Update;
-            }
-        }
-        
-        [EditorToolbarElement(id, typeof(SceneView))]
-        class HotReloadToolbarEventsButton : EditorToolbarButton, IAccessContainerWindow {
-            internal const string id = "HotReloadOverlay/EventsButton";
-            public EditorWindow containerWindow { get; set; }
-            
-            bool lastShowingRedDot;
-            
-            internal HotReloadToolbarEventsButton() {
-                icon = HotReloadState.ShowingRedDot ? GUIHelper.GetInvertibleIcon(InvertibleIcon.EventsNew) : GUIHelper.GetInvertibleIcon(InvertibleIcon.Events);
-                tooltip = Translations.Timeline.EventsTooltip;
-                clicked += OnClick;
-                EditorApplication.update += Update;
-            }
-
-            void OnClick() {
-                HotReloadEventPopup.Open(PopupSource.Overlay, Event.current.mousePosition);
-            }
-       
-            void Update() {
-                if (lastShowingRedDot != HotReloadState.ShowingRedDot) {
-                    icon = HotReloadState.ShowingRedDot ? GUIHelper.GetInvertibleIcon(InvertibleIcon.EventsNew) : GUIHelper.GetInvertibleIcon(InvertibleIcon.Events);
-                    lastShowingRedDot = HotReloadState.ShowingRedDot;
-                }
-            }
-
-            ~HotReloadToolbarEventsButton() {
-                clicked -= OnClick;
-                EditorApplication.update -= Update;
-            }
-        }
-        
-        
-        [EditorToolbarElement(id, typeof(SceneView))]
-        class HotReloadToolbarRecompileButton : EditorToolbarButton, IAccessContainerWindow {
-            internal const string id = "HotReloadOverlay/RecompileButton";
-            
-            public EditorWindow containerWindow { get; set; }
-            
-            private Texture2D refreshIcon => GUIHelper.GetInvertibleIcon(InvertibleIcon.Recompile);
-            internal HotReloadToolbarRecompileButton() {
-                icon = refreshIcon;
-                tooltip = Translations.Miscellaneous.OverlayTooltipRecompile;
-                clicked += HotReloadRunTab.RecompileWithChecks;
+                EditorCodePatcher.RequestServerInfo();
+                icon = GetIndicationIcon();
+                tooltip = EditorIndicationState.IndicationStatusText;
             }
         }
 
@@ -104,7 +43,11 @@ namespace SingularityGroup.HotReload.Editor {
             if (EditorIndicationState.IndicationIconPath == null || EditorIndicationState.SpinnerActive) {
                 latestIcon = spinner.GetIcon();
             } else {
-                latestIcon = GUIHelper.GetLocalIcon(EditorIndicationState.IndicationIconPath);
+                var iconPath = EditorIndicationState.IndicationIconPath;
+                if (!iconTextures.TryGetValue(iconPath, out latestIcon)) {
+                    latestIcon = Resources.Load<Texture2D>(iconPath);
+                    iconTextures[iconPath] = latestIcon;
+                }
             }
             return latestIcon;
         }
@@ -112,21 +55,19 @@ namespace SingularityGroup.HotReload.Editor {
         private static Image indicationIcon;
         private static Label indicationText;
 
-        bool initialized;
         /// <summary>
         /// Create Hot Reload overlay panel.
         /// </summary>
         public override VisualElement CreatePanelContent() {
-            var root = new VisualElement() { name = Translations.UI.OverlayPanelName };
+            var root = new VisualElement() { name = "Hot Reload Indication" };
             root.style.flexDirection = FlexDirection.Row;
             
-            indicationIcon = new Image() { image = GUIHelper.GetLocalIcon(EditorIndicationState.greyIconPath) };
+            indicationIcon = new Image() { image = Resources.Load<Texture2D>(EditorIndicationState.greyIconPath) };
             indicationIcon.style.height = 30;
             indicationIcon.style.width = 30;
             indicationIcon.style.marginLeft = 2;
             indicationIcon.style.marginTop = 1;
             indicationIcon.style.marginRight = 5;
-            
             indicationText = new Label(){text = EditorIndicationState.IndicationStatusText};
             indicationText.style.paddingTop = 9;
             indicationText.style.marginLeft = new StyleLength(StyleKeyword.Auto);
@@ -136,43 +77,15 @@ namespace SingularityGroup.HotReload.Editor {
             root.Add(indicationText);
             root.style.width = 190;
             root.style.height = 32;
-            initialized = true;
+
+            EditorApplication.update += Update;
             return root;
         }
 
-        static bool _repaint;
-        static bool _instantRepaint;
-        static DateTime _lastRepaint;
         private void Update() {
-            if (!initialized) {
-                return;
-            }
-            if (lastIndicationStatus != EditorIndicationState.CurrentIndicationStatus) {
-                indicationIcon.image = GetIndicationIcon();
-                indicationText.text = EditorIndicationState.IndicationStatusText;
-                lastIndicationStatus = EditorIndicationState.CurrentIndicationStatus;
-            }
-            try {
-                if (HotReloadEventPopup.I.open 
-                    && EditorWindow.mouseOverWindow
-                    && EditorWindow.mouseOverWindow?.GetType() == typeof(UnityEditor.PopupWindow)
-                ) {
-                    _repaint = true;
-                }
-            } catch (NullReferenceException) {
-                // Unity randomly throws nullrefs when EditorWindow.mouseOverWindow gets accessed
-            }
-            if (_repaint && DateTime.UtcNow - _lastRepaint > TimeSpan.FromMilliseconds(33)) {
-                _repaint = false;
-                _instantRepaint = true;
-            }
-            if (_instantRepaint) {
-                HotReloadEventPopup.I.Repaint();
-            }
-        }
-
-        ~HotReloadOverlay() {
-            EditorApplication.update -= Update;
+            EditorCodePatcher.RequestServerInfo();
+            indicationIcon.image = GetIndicationIcon();
+            indicationText.text = EditorIndicationState.IndicationStatusText;
         }
     }
 }

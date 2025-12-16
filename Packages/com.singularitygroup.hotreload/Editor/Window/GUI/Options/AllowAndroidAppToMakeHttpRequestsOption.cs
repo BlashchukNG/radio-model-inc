@@ -1,11 +1,14 @@
-﻿using SingularityGroup.HotReload.Editor.Localization;
-using UnityEditor;
+﻿using UnityEditor;
 
 namespace SingularityGroup.HotReload.Editor {
     internal class AllowAndroidAppToMakeHttpRequestsOption : ProjectOptionBase {
         public override string ShortSummary {
             get {
-                return Translations.Settings.OptionAllowHttpRequests;
+                #if UNITY_2022_1_OR_NEWER
+                return "Allow app to make HTTP requests";
+                #else
+                return "Allow Android app to make HTTP requests";
+                #endif
             }
         }
 
@@ -42,7 +45,7 @@ namespace SingularityGroup.HotReload.Editor {
         }
 
         public override void InnerOnGUI(SerializedObject so) {
-            var description = Translations.Settings.OptionAllowHttpRequestsDescription;
+            var description = "For Hot Reload to work on-device, please allow HTTP requests";
             EditorGUILayout.LabelField(description, HotReloadWindowStyles.WrapStyle);
         }
     }

@@ -2,46 +2,39 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SingularityGroup.HotReload.DTO;
-using SingularityGroup.HotReload.Editor.Localization;
 using UnityEngine;
 
 namespace SingularityGroup.HotReload.Editor {
     internal static class EditorIndicationState {
         internal enum IndicationStatus {  
             Stopped,
-            Started,
+            Login,
             Stopping,
             Installing,
             Starting,
-            Reloaded,
-            PartiallySupported,
+            Idle,
             Unsupported,
             Patching,
             Loading,
             Compiling,
             CompileErrors,
             ActivationFailed,
-            FinishRegistration,
-            Undetected,
-            Paused,
+            FinishRegistration
         }
 
         internal static readonly string greyIconPath = "grey";
         internal static readonly string greenIconPath = "green";
+        internal static readonly string yellowIconPath = "yellow";
         internal static readonly string redIconPath = "red";
         private static readonly Dictionary<IndicationStatus, string> IndicationIcon = new Dictionary<IndicationStatus, string> {
             // grey icon:
             { IndicationStatus.FinishRegistration, greyIconPath },
             { IndicationStatus.Stopped, greyIconPath },
-            { IndicationStatus.Paused, greyIconPath },
+            { IndicationStatus.Login, greyIconPath },
             // green icon:
-            { IndicationStatus.Started, greenIconPath },
-            // log icons:
-            { IndicationStatus.Reloaded, HotReloadTimelineHelper.alertIconString[AlertType.AppliedChange] },
-            { IndicationStatus.Unsupported, HotReloadTimelineHelper.alertIconString[AlertType.UnsupportedChange] },
-            { IndicationStatus.Undetected, HotReloadTimelineHelper.alertIconString[AlertType.UndetectedChange] },
-            { IndicationStatus.PartiallySupported, HotReloadTimelineHelper.alertIconString[AlertType.PartiallySupportedChange] },
-            { IndicationStatus.CompileErrors, HotReloadTimelineHelper.alertIconString[AlertType.CompileError] },
+            { IndicationStatus.Idle, greenIconPath },
+            // orange icon:
+            { IndicationStatus.Unsupported, yellowIconPath },
             // spinner:
             { IndicationStatus.Stopping, Spinner.SpinnerIconPath },
             { IndicationStatus.Starting, Spinner.SpinnerIconPath },
@@ -50,6 +43,7 @@ namespace SingularityGroup.HotReload.Editor {
             { IndicationStatus.Compiling, Spinner.SpinnerIconPath },
             { IndicationStatus.Installing, Spinner.SpinnerIconPath },
             // red icon:
+            { IndicationStatus.CompileErrors, redIconPath },
             { IndicationStatus.ActivationFailed, redIconPath },
         };
         
@@ -58,24 +52,19 @@ namespace SingularityGroup.HotReload.Editor {
             .Select(kvp => kvp.Key)
             .ToArray();
         
-        // NOTE: if you add longer text, make sure UI is wide enough for it
-        public static Dictionary<IndicationStatus, string> IndicationText => new Dictionary<IndicationStatus, string> {
-            { IndicationStatus.FinishRegistration, Translations.Miscellaneous.IndicationFinishRegistration },
-            { IndicationStatus.Started, Translations.Miscellaneous.IndicationStarted },
-            { IndicationStatus.Stopping, Translations.Miscellaneous.IndicationStopping },
-            { IndicationStatus.Stopped, Translations.Miscellaneous.IndicationStopped },
-            { IndicationStatus.Paused, Translations.Miscellaneous.IndicationPaused },
-            { IndicationStatus.Installing, Translations.Miscellaneous.IndicationInstalling },
-            { IndicationStatus.Starting, Translations.Miscellaneous.IndicationStarting },
-            { IndicationStatus.Reloaded, Translations.Miscellaneous.IndicationReloaded },
-            { IndicationStatus.PartiallySupported, Translations.Miscellaneous.IndicationPartiallySupported },
-            { IndicationStatus.Unsupported, Translations.Miscellaneous.IndicationUnsupported },
-            { IndicationStatus.Patching, Translations.Miscellaneous.IndicationPatching },
-            { IndicationStatus.Compiling, Translations.Miscellaneous.IndicationCompiling },
-            { IndicationStatus.CompileErrors, Translations.Miscellaneous.IndicationCompileErrors },
-            { IndicationStatus.ActivationFailed, Translations.Miscellaneous.IndicationActivationFailed },
-            { IndicationStatus.Loading, Translations.Miscellaneous.IndicationLoading },
-            { IndicationStatus.Undetected, Translations.Miscellaneous.IndicationUndetected},
+        private static readonly Dictionary<IndicationStatus, string> IndicationText = new Dictionary<IndicationStatus, string> {
+            { IndicationStatus.FinishRegistration, "Finish Registration" },
+            { IndicationStatus.Stopping, "Stopping Hot Reload" },
+            { IndicationStatus.Stopped, "Run Hot Reload" },
+            { IndicationStatus.Installing, "Installing" },
+            { IndicationStatus.Starting, "Starting Hot Reload" },
+            { IndicationStatus.Idle, "All patches applied" },
+            { IndicationStatus.Unsupported, "Latest patch failed" },
+            { IndicationStatus.Patching, "Applying patch" },
+            { IndicationStatus.Compiling, "Compiling" },
+            { IndicationStatus.CompileErrors, "Scripts have compile errors" },
+            { IndicationStatus.ActivationFailed, "Activation failed" },
+            { IndicationStatus.Loading, "Loading" },
         };
 
         private const int MinSpinnerDuration = 200;
@@ -84,21 +73,8 @@ namespace SingularityGroup.HotReload.Editor {
         private static bool SpinnerCompletedMinDuration => DateTime.UtcNow - spinnerStartedAt > TimeSpan.FromMilliseconds(MinSpinnerDuration);
         private static IndicationStatus GetIndicationStatus() {
             var status = GetIndicationStatusCore();
-            
-            // Note: performance sensitive code, don't use Link
-            bool newStatusIsSpinner = false;
-            for (var i = 0; i < SpinnerIndications.Length; i++) {
-                if (SpinnerIndications[i] == status) {
-                    newStatusIsSpinner = true;
-                }
-            }
-            bool latestStatusIsSpinner = false;
-            for (var i = 0; i < SpinnerIndications.Length; i++) {
-                if (SpinnerIndications[i] == latestStatus) {
-                    newStatusIsSpinner = true;
-                }
-            }
-            
+            var newStatusIsSpinner = SpinnerIndications.Contains(status);
+            var latestStatusIsSpinner = SpinnerIndications.Contains(latestStatus);
             if (status == latestStatus) {
                 return status;
             } else if (latestStatusIsSpinner) {
@@ -132,41 +108,26 @@ namespace SingularityGroup.HotReload.Editor {
                 return IndicationStatus.Compiling;
             if (EditorCodePatcher.Starting && !EditorCodePatcher.Stopping)
                 return IndicationStatus.Starting;
-            if (!Application.isPlaying && HotReloadPrefs.PauseHotReloadInEditMode)
-                return IndicationStatus.Paused;
             if (!EditorCodePatcher.Running)
                 return IndicationStatus.Stopped;
             if (EditorCodePatcher.Status?.isLicensed != true && EditorCodePatcher.Status?.isFree != true && EditorCodePatcher.Status?.freeSessionFinished == true)
                 return IndicationStatus.ActivationFailed;
             if (EditorCodePatcher.compileError)
                 return IndicationStatus.CompileErrors;
-
+            
             // fallback on patch status
-            if (!EditorCodePatcher.Started && !EditorCodePatcher.Running) {
-                return IndicationStatus.Stopped;
+            if (EditorCodePatcher.Started || EditorCodePatcher.Running) {
+                switch (EditorCodePatcher.patchStatus) {
+                    case PatchStatus.Idle:        return IndicationStatus.Idle;
+                    case PatchStatus.Patching:    return IndicationStatus.Patching;
+                    case PatchStatus.Unsupported: return IndicationStatus.Unsupported;
+                    case PatchStatus.Compiling:   return IndicationStatus.Compiling;
+                    case PatchStatus.None:
+                    default:                      return IndicationStatus.Idle;
+                }
             }
-            switch (EditorCodePatcher.patchStatus) {
-                case PatchStatus.Idle:
-                    if (!EditorCodePatcher.Compiling && !EditorCodePatcher.firstPatchAttempted && !EditorCodePatcher.compileError) {
-                        return IndicationStatus.Started;
-                    }
-                    if (EditorCodePatcher._applyingFailed) {
-                        return IndicationStatus.Unsupported;
-                    }
-                    if (EditorCodePatcher._appliedPartially) {
-                        return IndicationStatus.PartiallySupported;
-                    }
-                    if (EditorCodePatcher._appliedUndetected) {
-                        return IndicationStatus.Undetected;
-                    }
-                    return IndicationStatus.Reloaded;
-                case PatchStatus.Patching:     return IndicationStatus.Patching;
-                case PatchStatus.Unsupported:  return IndicationStatus.Unsupported;
-                case PatchStatus.Compiling:    return IndicationStatus.Compiling;
-                case PatchStatus.CompileError: return IndicationStatus.CompileErrors;
-                case PatchStatus.None:
-                default:                       return IndicationStatus.Reloaded;
-            }
+            // default
+            return IndicationStatus.Stopped;
         }
 
         internal static IndicationStatus CurrentIndicationStatus => GetIndicationStatus();
@@ -178,8 +139,12 @@ namespace SingularityGroup.HotReload.Editor {
                 string txt;
                 if (indicationStatus == IndicationStatus.Starting && EditorCodePatcher.StartupProgress != null) {
                     txt = EditorCodePatcher.StartupProgress.Item2;
+                } else if (EditorCodePatcher.Failures.Count > 0 && indicationStatus == IndicationStatus.Idle) {
+                    txt = "Latest patch applied";
+                } else if (!EditorCodePatcher.Compiling && !EditorCodePatcher.firstPatchAttempted && !EditorCodePatcher.compileError && indicationStatus == IndicationStatus.Idle) {
+                    txt = "Waiting for code changes";
                 } else if (!IndicationText.TryGetValue(indicationStatus, out txt)) {
-                    Log.Warning(Translations.Errors.WarningIndicationTextNotFound, indicationStatus);
+                    Log.Warning($"Indication text not found for status {indicationStatus}");
                 } else {
                     txt = IndicationText[indicationStatus];
                 }

@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Threading.Tasks;
 using SingularityGroup.HotReload.Editor.Cli;
-using SingularityGroup.HotReload.Editor.Localization;
 using UnityEditor;
 
 namespace SingularityGroup.HotReload.Editor {
     internal sealed class ExposeServerOption : ComputerOptionBase {
 
-        public override string ShortSummary => Translations.Settings.OptionExposeServerShort;
-        public override string Summary => Translations.Settings.OptionExposeServerFull;
+        public override string ShortSummary => "Allow Mobile Builds to Connect";
+        public override string Summary => "Allow Mobile Builds to Connect (WiFi)";
 
         public override void InnerOnGUI() {
             string description;
             if (GetValue()) {
-                description = Translations.Settings.OptionExposeServerDescriptionEnabled;
+                description = "The HotReload server is reachable from devices on the same Wifi network";
             } else {
-                description = Translations.Settings.OptionExposeServerDescriptionDisabled;
+                description = "The HotReload server is available to your computer only. Other devices cannot connect to it.";
             }
             EditorGUILayout.LabelField(description, HotReloadWindowStyles.WrapStyle);
         }
@@ -39,9 +38,10 @@ namespace SingularityGroup.HotReload.Editor {
                 RunOnMainThreadSync(() => {
                     var isRunningResult = ServerHealthCheck.I.IsServerHealthy;
                     if (isRunningResult) {
-                        var restartServer = EditorUtility.DisplayDialog(Translations.Dialogs.DialogTitleHotReload,
-                            string.Format(Translations.Dialogs.DialogMessageRestartExposeServer, Summary),
-                            Translations.Dialogs.DialogButtonRestartServer, Translations.Dialogs.DialogButtonDontRestart);
+                        var restartServer = EditorUtility.DisplayDialog("Hot Reload",
+                            $"When changing '{Summary}', the Hot Reload server must be restarted for this to take effect." +
+                            "\nDo you want to restart it now?",
+                            "Restart server", "Don't restart");
                         if (restartServer) {
                             CodePatcher.I.ClearPatchedMethods();
                             EditorCodePatcher.RestartCodePatcher().Forget();
@@ -57,6 +57,18 @@ namespace SingularityGroup.HotReload.Editor {
                 if (token.IsCancellationRequested) return;
                 try {
                     action();
+                } catch (Exception ex) {
+                    ThreadUtility.LogException(ex, token);
+                }
+            }, token);
+        }
+        
+        void RunTask(Func<Task> action) {
+            var token = HotReloadWindow.Current.cancelToken;
+            Task.Run(async () => {
+                if (token.IsCancellationRequested) return;
+                try {
+                    await action();
                 } catch (Exception ex) {
                     ThreadUtility.LogException(ex, token);
                 }

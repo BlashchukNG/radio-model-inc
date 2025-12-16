@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using SingularityGroup.HotReload.DTO;
 using SingularityGroup.HotReload.Editor.Cli;
-using SingularityGroup.HotReload.Editor.Localization;
 using UnityEditor;
 using UnityEngine;
 using EditorGUI = UnityEditor.EditorGUI;
@@ -29,7 +28,7 @@ namespace SingularityGroup.HotReload.Editor {
             this.registrationRequired = registrationRequired;
         }
     }
-
+    
     internal class HotReloadSettingsTab : HotReloadTabBase {
         private readonly HotReloadOptionsSection optionsSection;
 
@@ -42,7 +41,7 @@ namespace SingularityGroup.HotReload.Editor {
             var target = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
             return HotReloadBuildHelper.IsMonoSupported(target);
         });
-
+        
         // Resources.Load uses cache, so it's safe to call it every frame.
         //  Retrying Load every time fixes an issue where you import the package and constructor runs, but resources aren't loadable yet.
         private Texture iconCheck => Resources.Load<Texture>("icon_check_circle");
@@ -50,17 +49,22 @@ namespace SingularityGroup.HotReload.Editor {
 
         [SuppressMessage("ReSharper", "Unity.UnknownResource")] // Rider doesn't check packages
         public HotReloadSettingsTab(HotReloadWindow window) : base(window,
-            Translations.Settings.SettingsTitle,
+            "Settings",
             "_Popup",
-            Translations.OnDevice.OnDeviceHeadline) {
+            "Make changes to a build running on-device.")
+        {
             optionsSection = new HotReloadOptionsSection();
         }
 
         private GUIStyle headlineStyle;
         private GUIStyle paddedStyle;
-        
-        private Vector2 _settingsTabScrollPos;
-        
+
+        /*
+         * EditorGUILayout.LabelField is designed to work with the Unity editor's inspector window,
+         * which has its own layout and padding system. This can cause some issues with custom GUIStyles,
+         * as the padding and layout settings of the custom style may not match the inspector window's settings.
+         */
+
         HotReloadSettingsTabState currentState;
         public override void OnGUI() {
             // HotReloadAboutTabState ensures rendering is consistent between Layout and Repaint calls
@@ -69,166 +73,100 @@ namespace SingularityGroup.HotReload.Editor {
             // See thread for more context: https://answers.unity.com/questions/17718/argumentexception-getting-control-2s-position-in-a.html
             if (Event.current.type == EventType.Layout) {
                 currentState = new HotReloadSettingsTabState(
-                    running: EditorCodePatcher.Running,
+                    running: EditorCodePatcher.Running, 
                     trialLicense: EditorCodePatcher.Status != null && (EditorCodePatcher.Status?.isTrial == true),
                     loginStatus: EditorCodePatcher.Status,
                     isServerHealthy: ServerHealthCheck.I.IsServerHealthy,
                     registrationRequired: RedeemLicenseHelper.I.RegistrationRequired
                 );
             }
-            using (var scope = new EditorGUILayout.ScrollViewScope(_settingsTabScrollPos, GUI.skin.horizontalScrollbar, GUI.skin.verticalScrollbar, GUILayout.MaxHeight(Math.Max(HotReloadWindowStyles.windowScreenHeight, 800)), GUILayout.MaxWidth(Math.Max(HotReloadWindowStyles.windowScreenWidth, 800)))) {
-                _settingsTabScrollPos.x = scope.scrollPosition.x;
-                _settingsTabScrollPos.y = scope.scrollPosition.y;
-                using (new EditorGUILayout.VerticalScope(HotReloadWindowStyles.DynamicSectionHelpTab)) {
-                    GUILayout.Space(10);
-                    if (!EditorCodePatcher.LoginNotRequired
-                        && !currentState.registrationRequired
-                        // Delay showing login in settings to not confuse users that they need to login to use Free trial
-                        && (HotReloadPrefs.RateAppShown
-                            || PackageConst.IsAssetStoreBuild)
-                       ) {
-                        using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionOuterBoxCompact)) {
-                            using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionInnerBoxWide)) {
-                                using (new EditorGUILayout.VerticalScope()) {
-                                    RenderLicenseInfoSection();
-                                }
-                            }
-                        }
-                    }
 
-                    using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionOuterBoxCompact)) {
-                        using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionInnerBoxWide)) {
-                            using (new EditorGUILayout.VerticalScope()) {
-                                HotReloadPrefs.ShowConfiguration = EditorGUILayout.Foldout(HotReloadPrefs.ShowConfiguration, Translations.Settings.SettingsConfiguration, true, HotReloadWindowStyles.FoldoutStyle);
-                                if (HotReloadPrefs.ShowConfiguration) {
-                                    EditorGUILayout.Space();
 
-                                    // main section
-                                    RenderUnityAutoRefresh();
-                                    using (new EditorGUI.DisabledScope(!EditorCodePatcher.autoRecompileUnsupportedChangesSupported)) {
-                                        RenderAutoRecompileUnsupportedChanges();
-                                        if (HotReloadPrefs.AutoRecompileUnsupportedChanges && EditorCodePatcher.autoRecompileUnsupportedChangesSupported) {
-                                            using (new EditorGUILayout.VerticalScope(paddedStyle ?? (paddedStyle = new GUIStyle { padding = new RectOffset(20, 0, 0, 0) }))) {
-                                                RenderAutoRecompileUnsupportedChangesImmediately();
-                                                RenderAutoRecompileUnsupportedChangesOnExitPlayMode();
-                                                RenderAutoRecompileUnsupportedChangesInPlayMode();
-                                                RenderAutoRecompileInspectorFieldEdits();
-                                                RenderAutoRecompilePartiallyUnsupportedChanges();
-                                                RenderDisplayNewMonobehaviourMethodsAsPartiallySupported();
-                                                RenderAutoRecompileUnsupportedChangesInEditMode();
-                                            }
-                                        }
-                                        EditorGUILayout.Space();
-                                    }
-                                    RenderAssetRefresh();
-                                    if (HotReloadPrefs.AllAssetChanges) {
-                                        using (new EditorGUILayout.VerticalScope(paddedStyle ?? (paddedStyle = new GUIStyle { padding = new RectOffset(20, 0, 0, 0) }))) {
-                                            RenderIncludeShaderChanges();
-                                        }
-
-                                        EditorGUILayout.Space();
-                                    }
-                                    RenderDebuggerCompatibility();
-
-                                    // // fields
-                                    // RenderShowFeatures();
-                                    // using (new EditorGUILayout.VerticalScope(paddedStyle ?? (paddedStyle = new GUIStyle { padding = new RectOffset(20, 0, 0, 0) }))) {
-                                    //     RenderShowApplyfieldInitializerEditsToExistingClassInstances();
-                                    //
-                                    //     EditorGUILayout.Space();
-                                    // }
-
-                                    // visual feedback
-                                    if (EditorWindowHelper.supportsNotifications) {
-                                        RenderShowNotifications();
-                                        using (new EditorGUILayout.VerticalScope(paddedStyle ?? (paddedStyle = new GUIStyle { padding = new RectOffset(20, 0, 0, 0) }))) {
-                                            RenderShowPatchingNotifications();
-                                            RenderShowCompilingUnsupportedNotifications();
-                                        }
-
-                                        EditorGUILayout.Space();
-                                    }
-
-                                    // misc
-                                    RenderMiscHeader();
-                                    using (new EditorGUILayout.VerticalScope(paddedStyle ?? (paddedStyle = new GUIStyle { padding = new RectOffset(20, 0, 0, 0) }))) {
-                                        RenderAutostart();
-                                        RenderConsoleWindow();
-
-                                        EditorGUILayout.Space();
-                                    }
-
-                                    EditorGUILayout.Space();
-                                    using (new EditorGUILayout.HorizontalScope()) {
-                                        GUILayout.FlexibleSpace();
-                                        HotReloadWindow.RenderShowOnStartup();
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (!EditorCodePatcher.LoginNotRequired && currentState.trialLicense && currentState.running) {
-                        using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionOuterBoxCompact)) {
-                            using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionInnerBoxWide)) {
-                                using (new EditorGUILayout.VerticalScope()) {
-                                    RenderPromoCodeSection();
-                                }
-                            }
-                        }
-                    }
-
-                    using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionOuterBoxCompact)) {
-                        using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionInnerBoxWide)) {
-                            using (new EditorGUILayout.VerticalScope()) {
-                                RenderOnDevice();
-                            }
-                        }
-                    }
-                    
-                    using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionOuterBoxCompact)) {
-                        using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.SectionInnerBoxWide)) {
-                            using (new EditorGUILayout.VerticalScope()) {
-                                HotReloadPrefs.ShowAdvanced = EditorGUILayout.Foldout(HotReloadPrefs.ShowAdvanced, Translations.Settings.SettingsAdvanced, true, HotReloadWindowStyles.FoldoutStyle);
-                                if (HotReloadPrefs.ShowAdvanced) {
-                                    EditorGUILayout.Space();
-
-                                    DeactivateHotReload();
-                                    DisableDetailedErrorReporting();
-                                    PauseHotReloadInEditMode();
-                                }
-                            }
+            if (!EditorCodePatcher.LoginNotRequired 
+                && !currentState.registrationRequired 
+                // Delay showing login in settings to not confuse users that they need to login to use Free trial
+                && (HotReloadPrefs.RateAppShown
+                    || PackageConst.IsAssetStoreBuild)
+            ) {
+                using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionOuterBoxCompact)) {
+                    using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionInnerBoxWide)) {
+                        using (new EditorGUILayout.VerticalScope()) {
+                            RenderLicenseInfoSection();
                         }
                     }
                 }
             }
-        }
 
+            using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionOuterBoxCompact)) {
+                using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionInnerBoxWide)) {
+                    using (new EditorGUILayout.VerticalScope()) {
+                        HotReloadPrefs.ShowConfiguration = EditorGUILayout.Foldout(HotReloadPrefs.ShowConfiguration, "Configuration", true, HotReloadWindowStyles.FoldoutStyle);
+                        if (HotReloadPrefs.ShowConfiguration) {
+                            EditorGUILayout.Space();
+                            RenderUnityAutoRefresh();
+                            RenderAssetRefresh();
+                            using (new EditorGUI.DisabledScope(!EditorCodePatcher.autoRecompileUnsupportedChangesSupported)) {
+                                RenderAutoRecompileUnsupportedChanges();
+                                if (HotReloadPrefs.AutoRecompileUnsupportedChanges && EditorCodePatcher.autoRecompileUnsupportedChangesSupported) {
+                                    using (new EditorGUILayout.VerticalScope(paddedStyle ?? (paddedStyle = new GUIStyle { padding = new RectOffset(20, 0, 0, 0) }))) {
+                                        RenderAutoRecompileUnsupportedChangesImmediately();
+                                        RenderAutoRecompileUnsupportedChangesInPlayMode();
+                                    }
+                                }
+                                EditorGUILayout.Space();
+                            }
+                            RenderConsoleWindow();
+                            RenderAutostart();
+                        }
+                    }
+                }
+            }
+
+            if (!EditorCodePatcher.LoginNotRequired && currentState.trialLicense && currentState.running) {
+                using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionOuterBoxCompact)) {
+                    using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionInnerBoxWide)) {
+                        using (new EditorGUILayout.VerticalScope()) {
+                            RenderPromoCodeSection();
+                        }
+                    }
+                }
+            }
+
+            using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionOuterBoxCompact)) {
+                using (new EditorGUILayout.HorizontalScope(HotReloadWindowStyles.DynamicSectionInnerBoxWide)) {
+                    using (new EditorGUILayout.VerticalScope()) {
+                        RenderOnDevice();
+                    }
+                }
+            }
+        }
+        
         void RenderUnityAutoRefresh() {
-            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleManageAutoRefresh), HotReloadPrefs.AllowDisableUnityAutoRefresh);
+            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent("Allow to manage Unity's Auto Compile settings (recommended)"), HotReloadPrefs.AllowDisableUnityAutoRefresh);
             if (newSettings != HotReloadPrefs.AllowDisableUnityAutoRefresh) {
                 HotReloadPrefs.AllowDisableUnityAutoRefresh = newSettings;
             }
             string toggleDescription;
             if (HotReloadPrefs.AllowDisableUnityAutoRefresh) {
-                toggleDescription = Translations.Settings.SettingsManageAutoRefreshOn;
+                toggleDescription = "Hot Reload will manage Unity's Auto Refresh and Script Compilation settings when it's running. Previous settings will be restored when Hot Reload is stopped.";
             } else {
-                toggleDescription = Translations.Settings.SettingsManageAutoRefreshOff;
+                toggleDescription = "Enable to allow Hot Reload to manage Unity's Auto Refresh and Script Compilation settings when it's running. If enabled, previous settings will be restored when Hot Reload is stopped.";
             }
             EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
             EditorGUILayout.EndToggleGroup();
-            EditorGUILayout.Space(6f);
+            EditorGUILayout.Space(3f);
         }
         
         void RenderAssetRefresh() {
-            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleAssetRefresh), HotReloadPrefs.AllAssetChanges);
+            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent("Asset refresh (recommended)"), HotReloadPrefs.AllAssetChanges);
             if (newSettings != HotReloadPrefs.AllAssetChanges) {
                 HotReloadPrefs.AllAssetChanges = newSettings;
                 // restart when setting changes
                 if (ServerHealthCheck.I.IsServerHealthy) {
-                    var restartServer = EditorUtility.DisplayDialog(Translations.Dialogs.DialogTitleRestartServer,
-                        Translations.Dialogs.DialogMessageRestartAssetRefresh,
-                        Translations.Dialogs.DialogButtonRestartHotReload, Translations.Dialogs.DialogButtonDontRestart);
+                    var restartServer = EditorUtility.DisplayDialog("Hot Reload",
+                        $"When changing 'Asset refresh', the Hot Reload server must be restarted for this to take effect." +
+                        "\nDo you want to restart it now?",
+                        "Restart server", "Don't restart");
                     if (restartServer) {
                         EditorCodePatcher.RestartCodePatcher().Forget();
                     }
@@ -236,56 +174,28 @@ namespace SingularityGroup.HotReload.Editor {
             }
             string toggleDescription;
             if (HotReloadPrefs.AllAssetChanges) {
-                toggleDescription = Translations.Settings.SettingsAssetRefreshOn;
+                toggleDescription = "Hot Reload will refresh changed assets in the project.";
             } else {
-                toggleDescription = Translations.Settings.SettingsAssetRefreshOff;
+                toggleDescription = "Enable to allow Hot Reload to refresh changed assets in the project. All asset types are supported including sprites, prefabs, shaders etc.";
             }
             EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
             EditorGUILayout.EndToggleGroup();
-            EditorGUILayout.Space(6f);
-        }
-        
-        void RenderDebuggerCompatibility() {
-            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleDebuggerCompatibility), HotReloadPrefs.AutoDisableHotReloadWithDebugger);
-            if (newSettings != HotReloadPrefs.AutoDisableHotReloadWithDebugger) {
-                HotReloadPrefs.AutoDisableHotReloadWithDebugger = newSettings;
-                CodePatcher.I.debuggerCompatibilityEnabled = !HotReloadPrefs.AutoDisableHotReloadWithDebugger;
-            }
-            string toggleDescription;
-            if (HotReloadPrefs.AutoDisableHotReloadWithDebugger) {
-                toggleDescription = Translations.Settings.SettingsDebuggerCompatibilityOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsDebuggerCompatibilityOff;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-            EditorGUILayout.Space(6f);
-        }
-        
-        void RenderIncludeShaderChanges() {
-            HotReloadPrefs.IncludeShaderChanges = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleRefreshShaders), HotReloadPrefs.IncludeShaderChanges);
-            string toggleDescription;
-            if (HotReloadPrefs.IncludeShaderChanges) {
-                toggleDescription = Translations.Settings.SettingsRefreshShadersOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsRefreshShadersOff;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
+            EditorGUILayout.Space(3f);
         }
 
         void RenderConsoleWindow() {
             if (!HotReloadCli.CanOpenInBackground) {
                 return;
             }
-            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleHideConsole), HotReloadPrefs.DisableConsoleWindow);
+            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent("Hide console window on start"), HotReloadPrefs.DisableConsoleWindow);
             if (newSettings != HotReloadPrefs.DisableConsoleWindow) {
                 HotReloadPrefs.DisableConsoleWindow = newSettings;
                 // restart when setting changes
                 if (ServerHealthCheck.I.IsServerHealthy) {
-                    var restartServer = EditorUtility.DisplayDialog(Translations.Dialogs.DialogTitleRestartServer,
-                        Translations.Dialogs.DialogMessageRestartConsoleWindow,
-                        Translations.Dialogs.DialogButtonRestartServer, Translations.Dialogs.DialogButtonDontRestart);
+                    var restartServer = EditorUtility.DisplayDialog("Hot Reload",
+                        $"When changing 'Hide console window on start', the Hot Reload server must be restarted for this to take effect." +
+                        "\nDo you want to restart it now?",
+                        "Restart server", "Don't restart");
                     if (restartServer) {
                         EditorCodePatcher.RestartCodePatcher().Forget();
                     }
@@ -293,292 +203,71 @@ namespace SingularityGroup.HotReload.Editor {
             }
             string toggleDescription;
             if (HotReloadPrefs.DisableConsoleWindow) {
-                toggleDescription = Translations.Settings.SettingsHideConsoleOn;
+                toggleDescription = "Hot Reload will start without creating a console window. Logs can be accessed through \"Help\" tab.";
             } else {
-                toggleDescription = Translations.Settings.SettingsHideConsoleOff;
+                toggleDescription = "Enable to start Hot Reload without creating a console window.";
             }
             EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
             EditorGUILayout.EndToggleGroup();
-            EditorGUILayout.Space(6f);
+            EditorGUILayout.Space(3f);
         }
         
-        void DeactivateHotReload() {
-            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleDeactivate), HotReloadPrefs.DeactivateHotReload);
-            if (newSettings != HotReloadPrefs.DeactivateHotReload) {
-                DeactivateHotReloadInner(newSettings);
-            }
-            string toggleDescription;
-            if (HotReloadPrefs.DeactivateHotReload) {
-                toggleDescription = Translations.Settings.SettingsDeactivatedOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsDeactivatedOff;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-            EditorGUILayout.Space(6f);
-        }
-        
-        void DisableDetailedErrorReporting() {
-            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleDisableErrorReporting), HotReloadPrefs.DisableDetailedErrorReporting);
-            DisableDetailedErrorReportingInner(newSettings);
-            string toggleDescription;
-            if (HotReloadPrefs.DisableDetailedErrorReporting) {
-                toggleDescription = Translations.Settings.SettingsDisableErrorReportingOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsDisableErrorReportingOff;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-            EditorGUILayout.Space(6f);
-        }
-        
-        void PauseHotReloadInEditMode() {
-            HotReloadPrefs.PauseHotReloadInEditMode = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.TogglePauseEditMode), HotReloadPrefs.PauseHotReloadInEditMode);
-            string toggleDescription;
-            if (HotReloadPrefs.PauseHotReloadInEditMode) {
-                toggleDescription = Translations.Settings.SettingsPauseEditModeOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsPauseEditModeOff;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-            EditorGUILayout.Space(6f);
-        }
-
-        public static void DisableDetailedErrorReportingInner(bool newSetting) {
-            if (newSetting == HotReloadPrefs.DisableDetailedErrorReporting) {
-                return;
-            }
-            HotReloadPrefs.DisableDetailedErrorReporting = newSetting;
-            // restart when setting changes
-            if (ServerHealthCheck.I.IsServerHealthy) {
-                var restartServer = EditorUtility.DisplayDialog(Translations.Dialogs.DialogTitleRestartServer,
-                    Translations.Dialogs.DialogMessageRestartErrorReporting,
-                    Translations.Dialogs.DialogButtonRestartServer, Translations.Dialogs.DialogButtonDontRestart);
-                if (restartServer) {
-                    EditorCodePatcher.RestartCodePatcher().Forget();
-                }
-            }
-        }
-
-        static void DeactivateHotReloadInner(bool deactivate) {
-            var confirmed = !deactivate || EditorUtility.DisplayDialog(Translations.Dialogs.DialogTitleDeactivate,
-                Translations.Dialogs.DialogMessageDeactivate,
-                Translations.Dialogs.DialogButtonDeactivate, Translations.Common.ButtonCancel);
-            if (confirmed) {
-                HotReloadPrefs.DeactivateHotReload = deactivate;
-                if (deactivate) {
-                    EditorCodePatcher.StopCodePatcher(recompileOnDone: true).Forget();
-                } else {
-                    HotReloadRunTab.Recompile();
-                }
-            }
-        }
-
         void RenderAutostart() {
-            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleAutostart), HotReloadPrefs.LaunchOnEditorStart);
+            var newSettings = EditorGUILayout.BeginToggleGroup(new GUIContent("Autostart on Unity open"), HotReloadPrefs.LaunchOnEditorStart);
             if (newSettings != HotReloadPrefs.LaunchOnEditorStart) {
                 HotReloadPrefs.LaunchOnEditorStart = newSettings;
             }
             string toggleDescription;
             if (HotReloadPrefs.LaunchOnEditorStart) {
-                toggleDescription = Translations.Settings.SettingsAutostartOn;
+                toggleDescription = "Hot Reload will be launched when Unity project opens.";
             } else {
-                toggleDescription = Translations.Settings.SettingsAutostartOff;
+                toggleDescription = "Enable to launch Hot Reload when Unity project opens.";
             }
             EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
             EditorGUILayout.EndToggleGroup();
             EditorGUILayout.Space();
         }
 
-        void RenderShowNotifications() {
-            EditorGUILayout.Space(10f);
-            GUILayout.Label(Translations.Settings.SettingsVisualFeedback, HotReloadWindowStyles.NotificationsTitleStyle);
-            EditorGUILayout.Space(10f);
-            
-            if (!EditorWindowHelper.supportsNotifications && !UnitySettingsHelper.I.playmodeTintSupported) {
-                var toggleDescription = Translations.Settings.SettingsIndicationsUnsupported;
-                EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            }
-        }
-
-        // void RenderShowFields() {
-        //     EditorGUILayout.Space(14f);
-        //     GUILayout.Label("Fields", HotReloadWindowStyles.NotificationsTitleStyle);
-        // }
-
-        void RenderMiscHeader() {
-            EditorGUILayout.Space(10f);
-            GUILayout.Label(Translations.Settings.SettingsMisc, HotReloadWindowStyles.NotificationsTitleStyle);
-            EditorGUILayout.Space(10f);
-        }
-
-        void RenderShowPatchingNotifications() {
-            HotReloadPrefs.ShowPatchingNotifications = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.TogglePatchingIndication), HotReloadPrefs.ShowPatchingNotifications);
-            string toggleDescription;
-            if (!EditorWindowHelper.supportsNotifications) {
-                toggleDescription = Translations.Settings.SettingsPatchingIndicationUnsupported;
-            } else if (!HotReloadPrefs.ShowPatchingNotifications) {
-                toggleDescription = Translations.Settings.SettingsPatchingIndicationOff;
-            } else {
-                toggleDescription = Translations.Settings.SettingsPatchingIndicationOn;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-        }
-        
-        // void RenderShowApplyfieldInitializerEditsToExistingClassInstances() {
-        //     var newSetting = EditorGUILayout.BeginToggleGroup(new GUIContent("Apply field initializer edits to existing class instances"), HotReloadPrefs.ApplyFieldInitiailzerEditsToExistingClassInstances);
-        //     ApplyApplyFieldInitializerEditsToExistingClassInstances(newSetting);
-        //     string toggleDescription;
-        //     if (HotReloadPrefs.ApplyFieldInitiailzerEditsToExistingClassInstances) {
-        //         toggleDescription = "New field initializers with constant value will update field value of existing objects.";
-        //     } else {
-        //         toggleDescription = "New field initializers will not modify existing objects.";
-        //     }
-        //     EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-        //     EditorGUILayout.EndToggleGroup();
-        // }
-
-        [Obsolete(Translations.MenuItems.NotImplementedObsolete)]
-        public static void ApplyApplyFieldInitializerEditsToExistingClassInstances(bool newSetting) {
-            if (newSetting != HotReloadPrefs.ApplyFieldInitiailzerEditsToExistingClassInstances) {
-                HotReloadPrefs.ApplyFieldInitiailzerEditsToExistingClassInstances = newSetting;
-                // restart when setting changes
-                if (ServerHealthCheck.I.IsServerHealthy) {
-                    var restartServer = EditorUtility.DisplayDialog(Translations.Dialogs.DialogTitleRestartServer,
-                        Translations.Dialogs.DialogMessageRestartFieldInitializer,
-                        Translations.Dialogs.DialogButtonRestartServer, Translations.Dialogs.DialogButtonDontRestart);
-                    if (restartServer) {
-                        EditorCodePatcher.RestartCodePatcher().Forget();
-                    }
-                }
-            }
-        }
-
-        void RenderShowCompilingUnsupportedNotifications() {
-            HotReloadPrefs.ShowCompilingUnsupportedNotifications = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleCompilingIndication), HotReloadPrefs.ShowCompilingUnsupportedNotifications);
-            string toggleDescription;
-            if (!EditorWindowHelper.supportsNotifications) {
-                toggleDescription = Translations.Settings.SettingsCompilingIndicationUnsupported;
-            } else if (!HotReloadPrefs.ShowCompilingUnsupportedNotifications) {
-                toggleDescription = Translations.Settings.SettingsCompilingIndicationOff;
-            } else {
-                toggleDescription = Translations.Settings.SettingsCompilingIndicationOn;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-        }
-        
         void RenderAutoRecompileUnsupportedChanges() {
-            HotReloadPrefs.AutoRecompileUnsupportedChanges = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleAutoRecompile), HotReloadPrefs.AutoRecompileUnsupportedChanges && EditorCodePatcher.autoRecompileUnsupportedChangesSupported);
+            HotReloadPrefs.AutoRecompileUnsupportedChanges = EditorGUILayout.BeginToggleGroup(new GUIContent("Auto recompile unsupported changes (recommended)"), HotReloadPrefs.AutoRecompileUnsupportedChanges && EditorCodePatcher.autoRecompileUnsupportedChangesSupported);
             string toggleDescription;
             if (!EditorCodePatcher.autoRecompileUnsupportedChangesSupported) {
-                toggleDescription = Translations.Settings.SettingsAutoRecompileUnsupported;
+                toggleDescription = "Auto recompiling unsupported changes is not supported in the Unity version you use.";
             } else if (HotReloadPrefs.AutoRecompileUnsupportedChanges) {
-                toggleDescription = Translations.Settings.SettingsAutoRecompileOn;
+                toggleDescription = "Hot Reload will recompile when unsupported changes detected.";
             } else {
-                toggleDescription = Translations.Settings.SettingsAutoRecompileOff;
-            }
-            if (!HotReloadPrefs.AutoRecompileUnsupportedChangesInEditMode && !HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode) {
-                HotReloadPrefs.AutoRecompileUnsupportedChangesInEditMode = true;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-        }
-        
-        void RenderAutoRecompileInspectorFieldEdits() {
-            HotReloadPrefs.AutoRecompileInspectorFieldsEdit = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleAutoRecompileInspector), HotReloadPrefs.AutoRecompileInspectorFieldsEdit);
-            string toggleDescription;
-            if (HotReloadPrefs.AutoRecompileInspectorFieldsEdit) {
-                toggleDescription = Translations.Settings.SettingsAutoRecompileInspectorOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsAutoRecompileInspectorOff;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-        }
-        
-        void RenderAutoRecompilePartiallyUnsupportedChanges() {
-            HotReloadPrefs.AutoRecompilePartiallyUnsupportedChanges = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleAutoRecompilePartial), HotReloadPrefs.AutoRecompilePartiallyUnsupportedChanges);
-            string toggleDescription;
-            if (HotReloadPrefs.AutoRecompilePartiallyUnsupportedChanges) {
-                toggleDescription = Translations.Settings.SettingsAutoRecompilePartialOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsAutoRecompilePartialOff;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-        }
-        
-        void RenderDisplayNewMonobehaviourMethodsAsPartiallySupported() {
-            HotReloadPrefs.DisplayNewMonobehaviourMethodsAsPartiallySupported = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleDisplayMonobehaviour), HotReloadPrefs.DisplayNewMonobehaviourMethodsAsPartiallySupported);
-            string toggleDescription;
-            if (HotReloadPrefs.DisplayNewMonobehaviourMethodsAsPartiallySupported) {
-                toggleDescription = Translations.Settings.SettingsDisplayMonobehaviourOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsDisplayMonobehaviourOff;
+                toggleDescription = "Enable to recompile when unsupported changes detected.";
             }
             EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
             EditorGUILayout.EndToggleGroup();
         }
         
         void RenderAutoRecompileUnsupportedChangesImmediately() {
-            HotReloadPrefs.AutoRecompileUnsupportedChangesImmediately = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleRecompileImmediately), HotReloadPrefs.AutoRecompileUnsupportedChangesImmediately);
+            HotReloadPrefs.AutoRecompileUnsupportedChangesImmediately = EditorGUILayout.BeginToggleGroup(new GUIContent("Recompile immediately"), HotReloadPrefs.AutoRecompileUnsupportedChangesImmediately);
             string toggleDescription;
             if (HotReloadPrefs.AutoRecompileUnsupportedChangesImmediately) {
-                toggleDescription = Translations.Settings.SettingsRecompileImmediatelyOn;
+                toggleDescription = "Unsupported changes will be recompiled immediately.";
             } else {
-                toggleDescription = Translations.Settings.SettingsRecompileImmediatelyOff;
+                toggleDescription = "Unsupported changes will be recompiled when editor is focused. Enable to recompile immediately.";
             }
             EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
             EditorGUILayout.EndToggleGroup();
         }
         
         void RenderAutoRecompileUnsupportedChangesInPlayMode() {
-            HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleRecompilePlayMode), HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode);
+            HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode = EditorGUILayout.BeginToggleGroup(new GUIContent("Recompile in Play Mode"), HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode);
             string toggleDescription;
             if (HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode) {
-                toggleDescription = Translations.Settings.SettingsRecompilePlayModeOn;
+                toggleDescription = "Hot Reload will exit Play Mode to recompile unsupported changes.";
             } else {
-                toggleDescription = Translations.Settings.SettingsRecompilePlayModeOff;
-            }
-            if (!HotReloadPrefs.AutoRecompileUnsupportedChangesInEditMode && !HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode) {
-                HotReloadPrefs.AutoRecompileUnsupportedChanges = false;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-        }
-        
-        void RenderAutoRecompileUnsupportedChangesInEditMode() {
-            HotReloadPrefs.AutoRecompileUnsupportedChangesInEditMode = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleRecompileEditMode), HotReloadPrefs.AutoRecompileUnsupportedChangesInEditMode);
-            string toggleDescription;
-            if (HotReloadPrefs.AutoRecompileUnsupportedChangesInEditMode) {
-                toggleDescription = Translations.Settings.SettingsRecompileEditModeOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsRecompileEditModeOff;
-            }
-            if (!HotReloadPrefs.AutoRecompileUnsupportedChangesInEditMode && !HotReloadPrefs.AutoRecompileUnsupportedChangesInPlayMode) {
-                HotReloadPrefs.AutoRecompileUnsupportedChanges = false;
-            }
-            EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
-            EditorGUILayout.EndToggleGroup();
-        }
-        
-        void RenderAutoRecompileUnsupportedChangesOnExitPlayMode() {
-            HotReloadPrefs.AutoRecompileUnsupportedChangesOnExitPlayMode = EditorGUILayout.BeginToggleGroup(new GUIContent(Translations.Settings.ToggleRecompileExitPlayMode), HotReloadPrefs.AutoRecompileUnsupportedChangesOnExitPlayMode);
-            string toggleDescription;
-            if (HotReloadPrefs.AutoRecompileUnsupportedChangesOnExitPlayMode) {
-                toggleDescription = Translations.Settings.SettingsRecompileExitPlayModeOn;
-            } else {
-                toggleDescription = Translations.Settings.SettingsRecompileExitPlayModeOff;
+                toggleDescription = "Enable to auto exit Play Mode to recompile unsupported changes.";
             }
             EditorGUILayout.LabelField(toggleDescription, HotReloadWindowStyles.WrapStyle);
             EditorGUILayout.EndToggleGroup();
         }
 
         void RenderOnDevice() {
-            HotReloadPrefs.ShowOnDevice = EditorGUILayout.Foldout(HotReloadPrefs.ShowOnDevice, Translations.Settings.SettingsOnDevice, true, HotReloadWindowStyles.FoldoutStyle);
+            HotReloadPrefs.ShowOnDevice = EditorGUILayout.Foldout(HotReloadPrefs.ShowOnDevice, "On-Device", true, HotReloadWindowStyles.FoldoutStyle);
             if (!HotReloadPrefs.ShowOnDevice) {
                 return;
             }
@@ -591,7 +280,7 @@ namespace SingularityGroup.HotReload.Editor {
                         alignment = TextAnchor.MiddleLeft
                     };
                     headlineStyle.normal.textColor = HotReloadWindowStyles.H2TitleStyle.normal.textColor;
-            
+
                     // bg color
                     if (HotReloadWindowStyles.IsDarkMode) {
                         headlineStyle.normal.background = EditorTextures.DarkGray40;
@@ -603,8 +292,8 @@ namespace SingularityGroup.HotReload.Editor {
                     headlineStyle.margin = new RectOffset(6, 6, 6, 6);
                 }
                 GUILayout.Space(9f); // space between logo and headline
-            
-                GUILayout.Label(Translations.OnDevice.OnDeviceHeadline,
+
+                GUILayout.Label("Make changes to a build running on-device",
                     headlineStyle, GUILayout.MinHeight(EditorGUIUtility.singleLineHeight * 1.4f));
                 // image showing how Hot Reload works with a phone
                 // var bannerBox = GUILayoutUtility.GetRect(flowchart.width * 0.6f, flowchart.height * 0.6f);
@@ -616,7 +305,7 @@ namespace SingularityGroup.HotReload.Editor {
             //ButtonToOpenBuildSettings();
 
             {
-                GUILayout.Label(Translations.Settings.SettingsManualConnect, HotReloadWindowStyles.H3TitleStyle);
+                GUILayout.Label("Manual connect", HotReloadWindowStyles.H3TitleStyle);
                 EditorGUILayout.Space();
                 
                 GUILayout.BeginHorizontal();
@@ -624,30 +313,27 @@ namespace SingularityGroup.HotReload.Editor {
                 // indent all controls (this works with non-labels)
                 GUILayout.Space(16f);
                 GUILayout.BeginVertical();
-            
-                string text;
-                var ip = IpHelper.GetIpAddressCached();
-                if (string.IsNullOrEmpty(ip)) {
-                    text = string.Format(Translations.OnDevice.OnDeviceManualConnectFormat, RequestHelper.port);
-                } else {
-                    text = string.Format(Translations.OnDevice.OnDeviceManualConnectWithIP, ip, RequestHelper.port);
-                }
-                GUILayout.Label(text, HotReloadWindowStyles.H3TitleWrapStyle);
+
+                HotReloadWindowStyles.H3TitleStyle.wordWrap = true;
+                GUILayout.Label($"If auto-pair fails, use this IP to connect: {IpHelper.GetIpAddress()}" +
+                                "\nMake sure you are on the same LAN/WiFi network",
+                    HotReloadWindowStyles.H3TitleStyle);
 
                 if (!currentState.isServerHealthy) {
                     DrawHorizontalCheck(ServerHealthCheck.I.IsServerHealthy,
-                        Translations.OnDevice.OnDeviceCheckHotReloadRunning,
-                        Translations.OnDevice.OnDeviceCheckHotReloadNotRunning,
+                        "Hot Reload is running",
+                        "Hot Reload is not running",
                         hasFix: false);
                 }
                 
                 if (!HotReloadPrefs.ExposeServerToLocalNetwork) {
-                    var summary = string.Format(Translations.OnDevice.OnDeviceCheckEnableExposeServer, new ExposeServerOption().ShortSummary);
+                    var summary = $"Enable '{new ExposeServerOption().ShortSummary}'";
                     DrawHorizontalCheck(HotReloadPrefs.ExposeServerToLocalNetwork,
                         summary,
                         summary);
                 }
-            
+
+                HotReloadWindowStyles.H3TitleStyle.wordWrap = false;
                 // explainer image that shows phone needs same wifi to auto connect ?
                 
                 GUILayout.EndVertical();
@@ -664,10 +350,10 @@ namespace SingularityGroup.HotReload.Editor {
             {
                 
                 EditorGUILayout.BeginHorizontal();
-                GUILayout.Label(Translations.Settings.SettingsBuildSettingsChecklist, HotReloadWindowStyles.H3TitleStyle);
+                GUILayout.Label("Build Settings Checklist", HotReloadWindowStyles.H3TitleStyle);
                 EditorGUI.BeginDisabledGroup(isSupported);
                 // One-click to change each setting to the supported value
-                if (GUILayout.Button(Translations.Common.ButtonFixAll, GUILayout.MaxWidth(90f))) {
+                if (GUILayout.Button("Fix All", GUILayout.MaxWidth(90f))) {
                     FixAllUnsupportedSettings(so);
                 }
                 EditorGUI.EndDisabledGroup();
@@ -685,7 +371,7 @@ namespace SingularityGroup.HotReload.Editor {
 
             // Settings checkboxes (Hot Reload options)
             {
-                GUILayout.Label(Translations.Settings.SettingsOptions, HotReloadWindowStyles.H3TitleStyle);
+                GUILayout.Label("Mobile", HotReloadWindowStyles.H3TitleStyle);
                 if (settingsObject) {
                     optionsSection.DrawGUI(so);
                 }
@@ -694,12 +380,11 @@ namespace SingularityGroup.HotReload.Editor {
         }
         
         private void RenderLicenseInfoSection() {
-            HotReloadRunTab.RenderLicenseInfo(
-                _window.RunTabState,
+            _window.RunTab.RenderLicenseInfo(
                 currentState.loginStatus,
                 verbose: true,
                 allowHide: false,
-                overrideActionButton:Translations.Common.ButtonActivateLicense,
+                overrideActionButton: "Activate License",
                 showConsumptions: true
             );
         }
@@ -775,12 +460,12 @@ namespace SingularityGroup.HotReload.Editor {
             if (current == buildTarget) {
                 return true;
             }
-            var confirmed = EditorUtility.DisplayDialog(Translations.Dialogs.DialogTitleSwitchBuildTarget,
-                Translations.Dialogs.DialogMessageSwitchBuildTarget,
-                Translations.Dialogs.DialogButtonSwitchToStandalone, Translations.Common.ButtonCancel);
+            var confirmed = EditorUtility.DisplayDialog("Switch Build Target",
+                "Switching the build target can take a while depending on project size.",
+                $"Switch to Standalone", "Cancel");
             if (confirmed) {
                 EditorUserBuildSettings.SwitchActiveBuildTargetAsync(BuildTargetGroup.Standalone, buildTarget);
-                Log.Info(Translations.About.LogBuildTargetSwitching, buildTarget);
+                Log.Info($"Build target is switching to {buildTarget}.");
                 return true;
             } else {
                 return false;
@@ -799,30 +484,36 @@ namespace SingularityGroup.HotReload.Editor {
             isSupported = true;
             var selectedPlatform = currentBuildTarget.Value;
             DrawHorizontalCheck(isCurrentBuildTargetSupported.Value,
-                string.Format(Translations.OnDevice.OnDeviceCheckPlatformSelected, selectedPlatform.ToString()),
-                string.Format(Translations.OnDevice.OnDeviceCheckPlatformNotSupported, selectedPlatform.ToString()));
+                $"The {selectedPlatform.ToString()} platform is selected",
+                $"The current platform is {selectedPlatform.ToString()} which is not supported");
 
             using (new EditorGUI.DisabledScope(!isCurrentBuildTargetSupported.Value)) {
+                // "Allow Mobile Builds to Connect (WiFi)"
                 foreach (var option in allOptions) {
                     DrawHorizontalCheck(option.GetValue(so),
-                        string.Format(Translations.OnDevice.OnDeviceCheckEnableExposeServer, option.ShortSummary),
-                        string.Format(Translations.OnDevice.OnDeviceCheckEnableExposeServer, option.ShortSummary));
+                        $"Enable \"{option.ShortSummary}\"",
+                        $"Enable \"{option.ShortSummary}\"");
                 }
 
                 DrawHorizontalCheck(EditorUserBuildSettings.development,
-                    Translations.OnDevice.OnDeviceCheckDevelopmentEnabled,
-                    Translations.OnDevice.OnDeviceCheckEnableDevelopment);
+                    "Development Build is enabled",
+                    "Enable \"Development Build\"");
                 
                 DrawHorizontalCheck(ScriptingBackend == ScriptingImplementation.Mono2x,
-                    Translations.OnDevice.OnDeviceCheckMonoBackend,
-                    Translations.OnDevice.OnDeviceCheckSetMonoBackend);
+                    $"Scripting Backend is set to Mono",
+                    $"Set Scripting Backend to Mono");
                 
                 DrawHorizontalCheck(StrippingLevel == ManagedStrippingLevel.Disabled,
-                    string.Format(Translations.OnDevice.OnDeviceCheckStrippingLevel, StrippingLevel),
-                    string.Format(Translations.OnDevice.OnDeviceCheckStrippingLevel, StrippingLevel),
-                    suggestedSolutionText: Translations.OnDevice.OnDeviceCheckStrippingSolution
+                    $"Stripping Level = {StrippingLevel}",
+                    $"Stripping Level = {StrippingLevel}",
+                    suggestedSolutionText: "Code stripping needs to be disabled to ensure that all methods are available for patching."
                 );
+
+                // if (isSupported) {
+                //     GUILayout.Label("Great! Your current build settings are supported by Hot Reload.\nBuild and Run to try it.", HotReloadWindowStyles.WrapStyle);
+                // }
             }
+            // dont show the build settings checklist because some are relevant only for the current platform.
         }
 
         /// <summary>

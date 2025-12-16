@@ -7,11 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using SingularityGroup.HotReload.DTO;
 using SingularityGroup.HotReload.Editor.Cli;
-using SingularityGroup.HotReload.Localization;
 using SingularityGroup.HotReload.Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
-using Translations = SingularityGroup.HotReload.Editor.Localization.Translations;
 
 namespace SingularityGroup.HotReload.Editor {
     internal class ServerDownloader : IProgress<float> {
@@ -33,11 +31,11 @@ namespace SingularityGroup.HotReload.Editor {
         }
         
         public bool CheckIfDownloaded(ICliController cliController) {
-            if(TryUseUserDefinedBinaryPath(cliController, GetExecutablePath(cliController))) {
+            if(IsDownloaded(cliController)) {
                 Started = true;
                 Progress = 1f;
                 return true;
-            } else if(IsDownloaded(cliController)) {
+            } else if(TryUseUserDefinedBinaryPath(cliController, GetExecutablePath(cliController))) {
                 Started = true;
                 Progress = 1f;
                 return true;
@@ -82,7 +80,7 @@ namespace SingularityGroup.HotReload.Editor {
                     var error = $"{e.GetType().Name}: {e.Message}";
                     errors = (errors ?? new HashSet<string>());
                     if (errors.Add(error)) {
-                        Log.Warning(Translations.Errors.ErrorDownloadFailed, error);
+                        Log.Warning($"Download attempt failed. If the issue persists please reach out to customer support for assistance. Exception: {error}");
                     }
                 }
                 if (!sucess) {
@@ -98,7 +96,7 @@ namespace SingularityGroup.HotReload.Editor {
                 };
                 // sending telemetry requires server to be running so we only attempt after server is downloaded
                 RequestHelper.RequestEditorEventWithRetry(new Stat(StatSource.Client, StatLevel.Error, StatFeature.Editor, StatEventType.Download), data).Forget();
-                Log.Info(Translations.Errors.ErrorDownloadSucceeded);
+                Log.Info("Download succeeded!");
             }
             
             const int ERROR_ALREADY_EXISTS = 0xB7;
@@ -133,31 +131,24 @@ namespace SingularityGroup.HotReload.Editor {
             }
             
             if (!File.Exists(customBinaryPath)) {
-                Log.Warning(Translations.Errors.ErrorServerBinaryNotFound, cliController.PlatformName, customBinaryPath);
+                Log.Warning($"unable to find server binary for platform '{cliController.PlatformName}' at '{customBinaryPath}'. " +
+                            $"Will proceed with downloading the binary (default behavior)");
                 return false;
             } 
             
             try {
-                var targetFile = new FileInfo(targetPath);
-                bool copy = true;
-                if (targetFile.Exists) {
-                    copy = File.GetLastWriteTimeUtc(customBinaryPath) > targetFile.LastWriteTimeUtc;
-                }
-                if (copy) {
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
-                    File.Copy(customBinaryPath, targetPath, true);
-                }
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                File.Copy(customBinaryPath, targetPath);
                 return true;
             } catch(IOException ex) {
-                Log.Warning(Translations.Errors.ErrorCopyingServerBinary, customBinaryPath, ex);
+                Log.Warning("encountered exception when copying server binary in the specified custom executable path '{0}':\n{1}", customBinaryPath, ex);
                 return false;
             }
         }
 
         static string GetDownloadUrl(ICliController cliController) {
             const string version = PackageConst.ServerVersion;
-            // NOTE: server is not translated at the moment so we always use english
-            var key = $"{DownloadUtility.GetPackagePrefix(version, Locale.English)}/server/{cliController.PlatformName}/{cliController.BinaryFileName}";
+            var key = $"{DownloadUtility.GetPackagePrefix(version)}/server/{cliController.PlatformName}/{cliController.BinaryFileName}";
             return DownloadUtility.GetDownloadUrl(key);
         }
 
@@ -167,16 +158,18 @@ namespace SingularityGroup.HotReload.Editor {
         
         public Task<bool> PromptForDownload() {
             if (EditorUtility.DisplayDialog(
-                title: Translations.Dialogs.DialogTitleInstallComponents,
-                message: Translations.Dialogs.DialogMessageInstallComponents,
-                ok: Translations.Dialogs.DialogButtonInstall,
-                cancel: Translations.Dialogs.DialogButtonMoreInfo)
+                title: "Install platform specific components",
+                message: InstallDescription,
+                ok: "Install",
+                cancel: "More Info")
             ) {
                 return EnsureDownloaded(HotReloadCli.controller, CancellationToken.None);
             }
             Application.OpenURL(Constants.AdditionalContentURL);
             return Task.FromResult(false);
         }
+        
+        public const string InstallDescription = "For Hot Reload to work, additional components specific to your operating system have to be installed";
     }
     
     class DownloadResult {

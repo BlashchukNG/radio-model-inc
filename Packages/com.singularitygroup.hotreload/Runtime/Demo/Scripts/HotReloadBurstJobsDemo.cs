@@ -34,9 +34,9 @@ namespace SingularityGroup.HotReload.Demo {
             handle.Complete();
             
             if (Demo.I.IsServerRunning()) {
-                informationText.text = Localization.Translations.Common.HotReloadIsRunning;
+                informationText.text = "Hot Reload is running";
             } else {
-                informationText.text = Localization.Translations.Common.HotReloadIsNotRunning;
+                informationText.text = "Hot Reload is not running";
             }
         }
         

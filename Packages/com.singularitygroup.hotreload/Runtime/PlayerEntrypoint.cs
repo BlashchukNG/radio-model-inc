@@ -1,3 +1,4 @@
+#if ENABLE_MONO && (DEVELOPMENT_BUILD || UNITY_EDITOR)
 #if UNITY_ANDROID && !UNITY_EDITOR
 #define MOBILE_ANDROID
 #endif
@@ -17,7 +18,6 @@ using UnityEngine.Networking;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 using System.IO;
-using SingularityGroup.HotReload.Localization;
 
 namespace SingularityGroup.HotReload {
     // entrypoint for Unity Player builds. Not necessary in Unity Editor.
@@ -42,11 +42,10 @@ namespace SingularityGroup.HotReload {
             bool onlyPrefabMissing;
             if (!IsPlayerWithHotReload(out onlyPrefabMissing)) {
                 if (onlyPrefabMissing) {
-                    Log.Warning(Localization.Translations.Logging.HotReloadNotAvailableBuildSettings);
+                    Log.Warning("Hot Reload is not available in this build because one or more build settings were not supported.");
                 }
                 return;
             }
-            Translations.LoadDefaultLocalization();
 
             TryAutoConnect().Forget();
         }
@@ -56,27 +55,21 @@ namespace SingularityGroup.HotReload {
                 buildInfo = await GetBuildInfo();
             } catch (Exception e) {
                 if (e is IOException) {
-                    Log.Warning(Localization.Translations.Logging.HotReloadNotAvailableBuildSettings);
+                    Log.Warning("Hot Reload is not available in this build because one or more build settings were not supported.");
                 } else {
-                    Log.Error($"{Localization.Translations.Errors.UnknownExceptionReadingBuildInfo}\n{e.GetType().Name}: {e.Message}");
+                    Log.Error($"Uknown exception happened when reading build info\n{e.GetType().Name}: {e.Message}");
                 }
                 return;
             }
             if (buildInfo == null) {
-                Log.Error(Localization.Translations.Errors.BuildInfoNotFound);
+                Log.Error($"Uknown issue happened when reading build info.");
                 return;
             }
-
-            CodePatcher.I.debuggerCompatibilityEnabled = true;
 
             try {
                 var customIp = PlayerPrefs.GetString("HotReloadRuntime.CustomIP", "");
                 if (!string.IsNullOrEmpty(customIp)) {
                     buildInfo.buildMachineHostName = customIp;
-                }
-                var customPort = PlayerPrefs.GetString("HotReloadRuntime.CustomPort", "");
-                if (!string.IsNullOrEmpty(customPort)) {
-                    buildInfo.buildMachinePort = int.Parse(customPort);
                 }
 
                 if (buildInfo.BuildMachineServer == null) {
@@ -90,15 +83,13 @@ namespace SingularityGroup.HotReload {
             }
         }
 
-        public static Task TryConnectToIpAndPort(string ip, int port) {
+        public static Task TryConnectToIp(string ip) {
             ip = ip.Trim();
             if (buildInfo == null) {
-                throw new ArgumentException(Localization.Translations.Logging.BuildInfoNotFound);
+                throw new ArgumentException("Build info not found");
             }
             buildInfo.buildMachineHostName = ip;
-            buildInfo.buildMachinePort = port;
             PlayerPrefs.SetString("HotReloadRuntime.CustomIP", ip);
-            PlayerPrefs.SetString("HotReloadRuntime.CustomPort", port.ToString());
             return TryConnect(buildInfo.BuildMachineServer, auto: false);
         }
 
@@ -116,7 +107,7 @@ namespace SingularityGroup.HotReload {
                 PlayerCodePatcher.UpdateHost(null).Forget();
             }
 
-            Log.Info(string.Format(Localization.Translations.Logging.ServerHealthyAfterHandshake, handshakeOk));
+            Log.Info($"Server is healthy after first handshake? {handshakeOk}");
         }
 
         /// on Android, streaming assets are inside apk zip, which can only be read using unity web request
@@ -159,3 +150,4 @@ namespace SingularityGroup.HotReload {
         }
     }
 }
+#endif

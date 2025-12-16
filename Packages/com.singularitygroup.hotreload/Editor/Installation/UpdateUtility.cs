@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using SingularityGroup.HotReload.Editor.Cli;
-using SingularityGroup.HotReload.Editor.Localization;
 using SingularityGroup.HotReload.RuntimeDependencies;
 using UnityEditor;
 #if UNITY_EDITOR_WIN
@@ -19,17 +18,17 @@ namespace SingularityGroup.HotReload.Editor {
             string serverDir;
             if(!CliUtils.TryFindServerDir(out serverDir)) {
                 progress?.Report(1);
-                return Translations.Utility.UnableToLocateHotReloadPackage;
+                return "unable to locate hot reload package";
             }
             var packageDir = Path.GetDirectoryName(Path.GetFullPath(serverDir));
             var cacheDir = Path.GetFullPath(PackageConst.LibraryCachePath);
             if(Path.GetPathRoot(packageDir) != Path.GetPathRoot(cacheDir)) {
                 progress?.Report(1);
-                return Translations.Utility.UnableToUpdatePackageDifferentDrive;
+                return "unable to update package because it is located on a different drive than the unity project";
             }
             var updatedPackageCopy = BackupPackage(packageDir, version);
             
-            var key = $"{DownloadUtility.GetPackagePrefix(version, PackageConst.DefaultLocale)}/HotReload.zip";
+            var key = $"{DownloadUtility.GetPackagePrefix(version)}/HotReload.zip";
             var url = DownloadUtility.GetDownloadUrl(key);
             var targetFileName = $"HotReload{version.Replace('.', '-')}.zip";
             var targetFilePath = CliUtils.GetTempDownloadFilePath(targetFileName);
@@ -44,13 +43,8 @@ namespace SingularityGroup.HotReload.Editor {
             progress?.Report(0.8f);
             
             var packageRecycleBinDir = PackageConst.LibraryCachePath + $"/PackageArchived-{version}-{Guid.NewGuid():N}";
-            try {
-                Directory.Move(packageDir, packageRecycleBinDir);
-                Directory.Move(updatedPackageCopy, packageDir);
-            } catch {
-                // fallback to replacing files individually if access to the folder is denied
-                PackageUpdater.UpdatePackage(targetFilePath, packageDir); 
-            }
+            Directory.Move(packageDir, packageRecycleBinDir);
+            Directory.Move(updatedPackageCopy, packageDir);
             try {
                 Directory.Delete(packageRecycleBinDir, true);
             } catch (IOException) {

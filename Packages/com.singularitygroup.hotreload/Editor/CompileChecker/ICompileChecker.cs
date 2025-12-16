@@ -3,7 +3,6 @@ using System;
 namespace SingularityGroup.HotReload.Editor {
     interface ICompileChecker {
         event Action onCompilationFinished;
-        bool hasCompileErrors { get; }
     }
     
     static class CompileChecker {

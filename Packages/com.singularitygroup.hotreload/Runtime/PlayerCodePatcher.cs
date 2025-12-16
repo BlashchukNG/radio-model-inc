@@ -1,8 +1,8 @@
+#if ENABLE_MONO && (DEVELOPMENT_BUILD || UNITY_EDITOR)
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using SingularityGroup.HotReload.DTO;
-using SingularityGroup.HotReload.Localization;
 
 namespace SingularityGroup.HotReload {
     
@@ -60,7 +60,6 @@ namespace SingularityGroup.HotReload {
             ThreadUtility.RunOnMainThread((Action)o);
         }
         
-        static string lastPatchId = string.Empty;
         static void OnIntervalMainThread() {
             PatchServerInfo verifiedServer;
             if(ServerHandshake.I.TryGetVerifiedServer(out verifiedServer)) {
@@ -75,19 +74,19 @@ namespace SingularityGroup.HotReload {
                 // we may have reconnected to the same host, after losing connection for several seconds
                 Prompts.SetConnectionState(ConnectionSummary.Connected, false);
                 serverHealthyAt = DateTime.UtcNow;
-                RequestHelper.PollMethodPatches(lastPatchId, resp => HandleResponseReceived(resp));
+                RequestHelper.PollMethodPatches(resp => HandleResponseReceived(resp));
             } else if (ServerHealthCheck.I.WasServerResponding) { // only update prompt state if disconnected server 
                 var secondsSinceHealthy = TimeSinceServerHealthy().TotalSeconds;
                 var reconnectTimeout = 30; // seconds
                 if (secondsSinceHealthy > 2) {
-                    Log.Info(Localization.Translations.Common.HotReloadUnreachable);
+                    Log.Info("Hot Reload was unreachable for 5 seconds, trying to reconnect...");
                     // feedback for the user so they know why patches are not applying
                     Prompts.SetConnectionState($"{ConnectionSummary.TryingToReconnect} {reconnectTimeout - secondsSinceHealthy:F0}s", false);
                     Prompts.ShowConnectionDialog();
                 }
                 if (secondsSinceHealthy > reconnectTimeout) {
                     // give up on the server, give user a way to connect to another
-                    Log.Info(string.Format(Localization.Translations.Logging.HotReloadUnreachableDisconnecting, reconnectTimeout));
+                    Log.Info("Hot Reload was unreachable for 40 seconds, disconnecting");
                     var disconnectedServer = RequestHelper.ServerInfo;
                     Disconnect().Forget();
                     // Let user tap button to retry connecting to the same server (maybe just need to run Hot Reload again)
@@ -109,8 +108,8 @@ namespace SingularityGroup.HotReload {
                     Log.Warning(failure);
                 }
             }
-            lastPatchId = response.id;
         }
     }
 
 }
+#endif

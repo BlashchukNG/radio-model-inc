@@ -1,15 +1,13 @@
 #if ENABLE_MONO && (DEVELOPMENT_BUILD || UNITY_EDITOR)
-using SingularityGroup.HotReload.Localization;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace SingularityGroup.HotReload {
     internal class ConnectionDialog : MonoBehaviour {
-
-        [Header(Localization.Translations.MenuItems.UIControls)]
+        [Header("UI controls")]
         public Button buttonHide;
 
-        [Header(Localization.Translations.MenuItems.Information)]
+        [Header("Information")]
         public Text textSummary;
         public Text textSuggestion;
         
@@ -40,7 +38,7 @@ namespace SingularityGroup.HotReload {
         }
 
         /// <param name="summary">One of the <see cref="ConnectionSummary"/> constants</param>
-        public void SetSummary(string summary) {
+        public void SetSummary(string summary = ConnectionSummary.Connected) {
             if (textSummary != null) textSummary.text = summary;
             isConnected = summary == ConnectionSummary.Connected;
         }
@@ -51,7 +49,7 @@ namespace SingularityGroup.HotReload {
         void Update() {
             textSuggestion.enabled = isConnected;
             if (SyncPatchCounts()) {
-                textSuggestion.text = string.Format(Localization.Translations.Dialogs.PatchesStatus, pendingPatches, patchesApplied);
+                textSuggestion.text = $"Patches: {pendingPatches} pending, {patchesApplied} applied";
             }
         }
 
@@ -69,14 +67,14 @@ namespace SingularityGroup.HotReload {
     /// Therefore, we use short and simple messages.
     /// </remarks>
     internal static class ConnectionSummary {
-        public static string Cancelled => Localization.Translations.Dialogs.ConnectionStateCancelled;
-        public static string Connecting => Localization.Translations.Dialogs.ConnectionStateConnecting;
-        public static string Handshaking => Localization.Translations.Dialogs.ConnectionStateHandshaking;
-        public static string DifferencesFound => Localization.Translations.Dialogs.ConnectionStateDifferencesFound;
-        public static string Connected => Localization.Translations.Dialogs.ConnectionStateConnected;
+        public const string Cancelled = "Cancelled";
+        public const string Connecting = "Connecting ...";
+        public const string Handshaking = "Handshaking ...";
+        public const string DifferencesFound = "Differences found";
+        public const string Connected = "Connected!";
         // reconnecting can be shown for a long time, so a longer message is okay
-        public static string TryingToReconnect => Localization.Translations.Dialogs.TryingToReconnect;
-        public static string Disconnected => Localization.Translations.Dialogs.Disconnected;
+        public const string TryingToReconnect = "Trying to reconnect ...";
+        public const string Disconnected = "Disconnected";
     }
 }
 #endif

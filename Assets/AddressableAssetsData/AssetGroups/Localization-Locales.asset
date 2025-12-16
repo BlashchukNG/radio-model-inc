@@ -15,23 +15,23 @@ MonoBehaviour:
   m_GroupName: Localization-Locales
   m_Data:
     m_SerializedData: []
-  m_GUID: 0b5c84c893363e94bae2f27aac2ca510
+  m_GUID: e5aeb87427385b44ca3d83a80c6031e7
   m_SerializeEntries:
-  - m_GUID: 3a63d98a26a918b47b982e8621cb9b0f
+  - m_GUID: 15faead84c22fa4459e9f66a7a0bf8e6
     m_Address: Russian (ru)
     m_ReadOnly: 1
     m_SerializedLabels:
     - Locale
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 83dc1c34b06c2f248bafc282e8d86f10
+  - m_GUID: 3e1193bb63e1e954bbd29a5a90d804b9
     m_Address: English (en)
     m_ReadOnly: 1
     m_SerializedLabels:
     - Locale
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 1
-  m_Settings: {fileID: 11400000, guid: 3b30398cc0d6e6d48a2c48b20d5b157d, type: 2}
+  m_Settings: {fileID: 11400000, guid: 268e353be608244499ab1fcc250306d4, type: 2}
   m_SchemaSet:
     m_Schemas:
-    - {fileID: 11400000, guid: c0e8600a91c17064dab49ffa325961bf, type: 2}
-    - {fileID: 11400000, guid: 2c0086e1772c6b342ad8261e77c00ad2, type: 2}
+    - {fileID: 11400000, guid: 83c9eba774d3e284cb168f4f40f6683f, type: 2}
+    - {fileID: 11400000, guid: 1ff35c2ee52aa9e4ea19a0aace9b4e5c, type: 2}

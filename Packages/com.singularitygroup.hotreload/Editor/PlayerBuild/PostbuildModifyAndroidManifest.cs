@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using SingularityGroup.HotReload.Editor.Localization;
 using UnityEditor.Android;
 using UnityEditor.Build;
 
@@ -34,7 +33,7 @@ namespace SingularityGroup.HotReload.Editor {
                 // Unity 2021 or older → put manifest flag in if Unity is making a Development Build
                 var manifestFilePath = FindAndroidManifest(path);
                 if (manifestFilePath == null) {
-                    throw new BuildFailedException(string.Format(Translations.Errors.ExceptionUnableToFindManifest, CodePatcher.TAG, manifestFileName));
+                    throw new BuildFailedException($"[{CodePatcher.TAG}] Unable to find {manifestFileName}");
                 }
                 SetUsesCleartextTraffic(manifestFilePath);
                 #endif
@@ -92,7 +91,7 @@ namespace SingularityGroup.HotReload.Editor {
                 return manifestFilePath;
             }
 
-            Log.Info(Translations.Errors.InfoManifestSearch, manifestFileName, manifestFilePath, dir.FullName);
+            Log.Info("Did not find {0} at {1}, searching for manifest file inside {2}", manifestFileName, manifestFilePath, dir.FullName);
             var manifestFiles = dir.GetFiles(manifestFileName, SearchOption.AllDirectories);
             if (manifestFiles.Length == 0) {
                 return null;
@@ -126,8 +125,8 @@ namespace SingularityGroup.HotReload.Editor {
                 @"<application\s",
                 "<application android:usesCleartextTraffic=\"true\" "
             );
-            newContents += $"\n<!-- {string.Format(Translations.Errors.CommentAndroidCleartextPermit, CodePatcher.TAG)} -->";
-            newContents += $"\n<!-- {string.Format(Translations.Errors.CommentAndroidCleartextDevelopmentOnly, CodePatcher.TAG)} -->";
+            newContents += $"\n<!-- [{CodePatcher.TAG}] Added android:usesCleartextTraffic=\"true\" to permit connecting to the Hot Reload http server running on your machine. -->";
+            newContents += $"\n<!-- [{CodePatcher.TAG}] This change only happens in Unity development builds. You can disable this in the Hot Reload settings window. -->";
             File.WriteAllText(manifestFilePath, newContents);
         }
     }

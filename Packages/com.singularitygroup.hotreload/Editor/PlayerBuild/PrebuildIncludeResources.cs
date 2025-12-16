@@ -2,7 +2,6 @@ using System;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEngine;
-using SingularityGroup.HotReload.Editor.Localization;
 
 namespace SingularityGroup.HotReload.Editor {
     /// <summary>Includes HotReload Resources only in development builds</summary>
@@ -48,7 +47,7 @@ namespace SingularityGroup.HotReload.Editor {
         
         public void OnPostprocessBuild(BuildTarget target, string path) {
             if (warnSettingsNotSupported) {
-                Debug.LogWarning(Translations.Errors.WarningBuildSettingsNotSupported);
+                Debug.LogWarning("Hot Reload was not included in the build because one or more build settings were not supported.");
             }
         }
 

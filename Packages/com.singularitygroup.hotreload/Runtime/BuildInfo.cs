@@ -1,3 +1,4 @@
+#if ENABLE_MONO && (DEVELOPMENT_BUILD || UNITY_EDITOR)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -79,16 +80,6 @@ namespace SingularityGroup.HotReload {
         /// Selected build target in Unity Editor.
         /// </summary>
         public string activeBuildTarget;
-        
-        /// <summary>
-        /// Used to pass in the origin onto the phone which is used to identify the correct server.
-        /// </summary>
-        public string buildMachineRequestOrigin;
-
-        /// <summary>
-        /// Used to define which language the package is translated to
-        /// </summary>
-        public string locale;
 
         [JsonIgnore]
         public HashSet<string> DefineSymbolsAsHashSet {
@@ -108,7 +99,7 @@ namespace SingularityGroup.HotReload {
                 if (buildMachineHostName == null || buildMachinePort == 0) {
                     return null;
                 }
-                return new PatchServerInfo(buildMachineHostName, buildMachinePort, commitHash, null, customRequestOrigin: buildMachineRequestOrigin);
+                return new PatchServerInfo(buildMachineHostName, buildMachinePort, commitHash, null, isRemote: true);
             }
         }
 
@@ -172,3 +163,4 @@ namespace SingularityGroup.HotReload {
         }
     }
 }
+#endif
